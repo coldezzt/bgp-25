@@ -11,12 +11,6 @@ service Notification {
   rpc SendNotification (NotificationRequest) returns (google.protobuf.Empty);
 }
 
-//Models
-message TelegramUserModel {
-  int64 id = 1;
-  int64 telegram_id = 2;
-}
-
 //Requests & Responses
 message NotificationRequest {
   int64 telegram_id = 1;
