@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+option csharp_namespace = "Reglamentator.WebAPI";
+
+package reglamentator;
+
+//Services
+service Operation {
+  rpc GetPlanedOperations (PlanedOperationsRequest) returns (PlanedOperationsResponse);
+  rpc GetOperationHistory (OperationHistoryRequest) returns (OperationHistoryResponse);
+  rpc CreateOperation (CreateOperationRequest) returns (OperationResponse);
+  rpc UpdateOperation (UpdateOperationRequest) returns (OperationResponse);
+  rpc DeleteOperation (DeleteOperationRequest) returns (OperationResponse);
+}
+
+service User {
+  rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
+}
+
+//Models
+message TelegramUserModel {
+  int64 id = 1;
+  int64 telegram_id = 2;
+}
+
+message CreateOperationModel {
+  string theme = 1;
+  string description = 2;
+  google.protobuf.Timestamp start_date = 3;
+  google.protobuf.StringValue cron = 4;
+  repeated CreateReminderModel reminders = 5;
+}
+
+message CreateReminderModel {
+  string message_template = 1;
+  int64 offset_minutes = 2;
+}
+
+message OperationModel {
+  int64 id = 1;
+  string theme = 2;
+  string description = 3;
+  google.protobuf.Timestamp start_date = 4;
+  google.protobuf.StringValue cron = 5;
+  TelegramUserModel user = 6;
+  repeated ReminderModel reminders = 7;
+}
+
+message ReminderModel {
+  int64 id = 1;
+  string message_template = 2;
+  int64 offset_minutes = 3;
+}
+
+message OperationInstanceModel {
+  int64 id = 1;
+  google.protobuf.Timestamp scheduled_at = 2;
+  google.protobuf.Timestamp executed_at = 3;
+  google.protobuf.StringValue result = 4;
+  OperationModel operation = 5;
+}
+
+//Requests & Responses
+message CreateUserRequest {
+  int64 telegram_id = 1;
+}
+
+message CreateUserResponse {
+  TelegramUserModel user = 1;
+}
+
+message CreateOperationRequest {
+  int64 telegram_id = 1;
+  CreateOperationModel operation = 2;
+}
+
+message UpdateOperationRequest {
+  int64 telegram_id = 1;
+  int64 operation_id = 2;
+  CreateOperationModel operation = 3;
+}
+
+message DeleteOperationRequest {
+  int64 telegram_id = 1;
+  int64 operation_id = 2;
+}
+
+message PlanedOperationsRequest {
+  int64 telegram_id = 1;
+  TimeRange range = 2;
+
+  enum TimeRange {
+    DAY = 0;
+    WEEK = 1;
+    MONTH = 2;
+  }
+}
+
+message PlanedOperationsResponse {
+  repeated OperationInstanceModel instances = 1;
+}
+
+message OperationHistoryRequest {
+  int64 telegram_id = 1;
+}
+
+message OperationHistoryResponse {
+  repeated OperationInstanceModel history = 1;
+}
+
+message OperationResponse {
+  OperationModel operation = 1;
+  string status_message = 2;
+}
