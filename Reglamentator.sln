@@ -17,6 +17,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Bot", "Bot", "{D268D791-4EE
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Backend", "Backend", "{AF696A37-5550-4FE3-B515-77F45524988E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Reglamentator.Test.Bot", "Tests\Reglamentator.Test.Bot\Reglamentator.Test.Bot.csproj", "{4997863A-15BC-41C7-BACB-1D075BF0B433}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,6 +48,10 @@ Global
 		{921225F3-3498-4742-A014-0DBBFFFB5A94}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{921225F3-3498-4742-A014-0DBBFFFB5A94}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{921225F3-3498-4742-A014-0DBBFFFB5A94}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4997863A-15BC-41C7-BACB-1D075BF0B433}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4997863A-15BC-41C7-BACB-1D075BF0B433}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4997863A-15BC-41C7-BACB-1D075BF0B433}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4997863A-15BC-41C7-BACB-1D075BF0B433}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{34A54440-2908-4BEF-A77B-98005ABF7389} = {D268D791-4EE8-404F-8E08-9C9B21F26A19}

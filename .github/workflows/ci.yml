@@ -1,0 +1,68 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend_changed: ${{ steps.filter.outputs.backend }}
+      bot_changes: ${{ steps.filter.outputs.bot }}
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Detect changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'Backend/**'
+              - 'Shared/**'
+            bot:
+              - 'Bot/**'
+              - 'Shared/**'
+  
+  build-and-test:
+    runs-on: ubuntu-latest
+    needs: check-changes
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+      
+      - name: Restore
+        run: dotnet restore Reglamentator.sln
+      
+      - name: Build
+        run: dotnet build Reglamentator.sln --configuration Release --no-restore
+      
+      - name: Test
+        run: dotnet test Tests/Reglamentator.Test.Bot/Reglamentator.Test.Bot.csproj --no-build --verbosity normal
+      
+      - name: Publish Bot
+        if: needs.check-changes.outputs.bot_changes == 'true'
+        run: dotnet publish Bot/Reglamentator.Bot/Reglamentator.Bot.csproj -c Release -o ./publish/bot
+      
+      - name: Publish Backend
+        if: needs.check-changes.outputs.backend_changed == 'true'
+        run: dotnet publish Backend/Reglamentator.WebAPI/Reglamentator.WebAPI.csproj -c Release -o ./publish/backend
+      
+      - name: Upload bot artifact
+        if: needs.check-changes.outputs.bot_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bot
+          path: ./publish/bot
+
+      - name: Upload bot artifact
+        if: needs.check-changes.outputs.backend_changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend
+          path: ./publish/backend

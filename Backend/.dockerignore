@@ -1,0 +1,26 @@
+# .NET build artifacts
+**/bin/
+**/obj/
+
+# Rider / VS / VSCode
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.idea/
+.vscode/
+
+# Git
+.git/
+.gitignore
+
+# Secrets / envs
+.env*
+secrets.json
+appsettings.Development.json
+
+# Logs
+*.log
+
+# Tests
+Tests/
