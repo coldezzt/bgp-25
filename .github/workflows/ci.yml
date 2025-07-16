@@ -43,7 +43,7 @@ jobs:
         run: dotnet build Reglamentator.sln --configuration Release --no-restore
       
       - name: Test
-        run: dotnet test Tests/Reglamentator.Test.Bot/Reglamentator.Test.Bot.csproj --no-build --verbosity normal
+        run: dotnet test Tests/Reglamentator.Test.Bot/Reglamentator.Test.Bot.csproj --verbosity normal
       
       - name: Publish Bot
         if: needs.check-changes.outputs.bot_changes == 'true'
