@@ -8,7 +8,6 @@
 
     <ItemGroup>
         <Protobuf Include="Protos\reglamentator.proto" GrpcServices="Server" />
-        <Protobuf Include="Protos\notification.proto" GrpcServices="Client" />
     </ItemGroup>
 
     <ItemGroup>

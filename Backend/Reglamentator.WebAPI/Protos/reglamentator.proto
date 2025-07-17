@@ -20,6 +20,10 @@ service User {
   rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
 }
 
+service Notification {
+  rpc ListenForNotifications (NotificationRequest) returns (stream NotificationResponse);
+}
+
 //Models
 message TelegramUserModel {
   int64 id = 1;
@@ -114,4 +118,12 @@ message OperationHistoryResponse {
 message OperationResponse {
   OperationModel operation = 1;
   string status_message = 2;
+}
+
+message NotificationRequest {
+}
+
+message NotificationResponse {
+  int64 telegram_id = 1;
+  string message = 2;
 }
