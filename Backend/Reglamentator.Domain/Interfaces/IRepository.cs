@@ -9,4 +9,5 @@ public interface IRepository<TEntity> where TEntity : class, IEntity
     Task<List<TEntity>> GetEntitiesByFilterAsync(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default);
     Task InsertEntityAsync(TEntity entity, CancellationToken cancellationToken = default);
     Task UpdateEntityAsync(TEntity entity, CancellationToken cancellationToken = default);
+    Task DeleteEntityAsync(TEntity entity, CancellationToken cancellationToken = default);
 }

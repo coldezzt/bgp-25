@@ -32,4 +32,10 @@ public abstract class Repository<T>(AppDbContext appDbContext): IRepository<T> w
         AppDbContext.Update(entity);
         await AppDbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task DeleteEntityAsync(T entity, CancellationToken cancellationToken = default)
+    {
+        AppDbContext.Remove(entity);
+        await AppDbContext.SaveChangesAsync(cancellationToken);
+    }
 }
