@@ -11,6 +11,7 @@ public class OperationInstanceRepository(AppDbContext appDbContext) : Repository
             .Where(opi => opi.ExecutedAt != null)
             .Include(opi => opi.Operation)
             .Where(opi => opi.Operation.TelegramUserId == telegramId)
+            .OrderBy(opi => opi.ExecutedAt)
             .ToListAsync(cancellationToken);
 
     public async Task<List<OperationInstance>> GetPlanedUserOperationsAsync(long telegramId, TimeRange range, CancellationToken cancellationToken = default)
@@ -29,12 +30,11 @@ public class OperationInstanceRepository(AppDbContext appDbContext) : Repository
         var operations = await AppDbContext.OperationInstances
             .Where(opi => 
                 opi.ExecutedAt == null &&
-                opi.ScheduledAt >= startDate &&
-                opi.ScheduledAt <= endDate)
+                opi.Operation.StartDate >= startDate &&
+                opi.Operation.StartDate <= endDate)
             .Include(opi => opi.Operation)
             .Where(opi => opi.Operation.TelegramUserId == telegramId)
-            //TODO: Поправить сортировку
-            .OrderBy(oi => oi.ScheduledAt)
+            .OrderBy(opi => opi.Operation.StartDate)
             .ToListAsync(cancellationToken);
 
         return operations;
