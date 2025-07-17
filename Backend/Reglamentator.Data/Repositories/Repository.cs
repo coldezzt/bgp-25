@@ -4,10 +4,14 @@ using Reglamentator.Domain.Interfaces;
 
 namespace Reglamentator.Data.Repositories;
 
-public abstract class Repository<T>(AppDbContext appDbContext): IRepository<T> where T : class
+public abstract class Repository<T>(AppDbContext appDbContext): IRepository<T> where T : class, IEntity
 {
     protected readonly AppDbContext AppDbContext = appDbContext;
         
+    public async Task<bool> IsExistAsync(long id, CancellationToken cancellationToken = default) =>
+        await AppDbContext.Set<T>()
+            .AnyAsync(e => e.Id == id, cancellationToken);
+    
     public virtual async Task<List<T>> GetEntitiesByFilterAsync(Expression<Func<T, bool>> filter, CancellationToken cancellationToken = default) =>
         await AppDbContext.Set<T>()
             .Where(filter)
