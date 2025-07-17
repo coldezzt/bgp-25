@@ -1,4 +1,4 @@
-namespace Reglamentator.Application.Dtos;
+namespace Reglamentator.Domain.Entities;
 
 public enum TimeRange
 {
