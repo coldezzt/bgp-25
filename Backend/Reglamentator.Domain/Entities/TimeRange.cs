@@ -2,7 +2,7 @@ namespace Reglamentator.Domain.Entities;
 
 public enum TimeRange
 {
-    Day = 1,
-    Week = 2,
-    Month = 3
+    Day = 0,
+    Week = 1,
+    Month = 2
 }
