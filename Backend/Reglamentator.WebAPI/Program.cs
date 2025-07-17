@@ -6,7 +6,8 @@ builder.Services.AddGrpc();
 
 var app = builder.Build();
 
-app.MapGrpcService<OperationService>();
-app.MapGrpcService<UserService>();
+app.MapGrpcService<OperationGrpcService>();
+app.MapGrpcService<UserGrpcService>();
+app.MapGrpcService<NotificationGrpcService>();
 
 app.Run();
