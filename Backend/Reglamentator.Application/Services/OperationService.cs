@@ -63,7 +63,7 @@ public class OperationService(
             History = [
                 new OperationInstance
                 {
-                    ScheduledAt = DateTime.UtcNow,
+                    ScheduledAt = operationDto.StartDate,
                     Result = null,
                     ExecutedAt = null
                 }]
