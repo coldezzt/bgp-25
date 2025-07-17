@@ -16,6 +16,12 @@ service Operation {
   rpc DeleteOperation (DeleteOperationRequest) returns (OperationResponse);
 }
 
+service Reminder {
+  rpc AddReminder (AddReminderRequest) returns (ReminderResponse);
+  rpc UpdateOperation (UpdateReminderRequest) returns (ReminderResponse);
+  rpc DeleteOperation (DeleteReminderRequest) returns (ReminderResponse);
+}
+
 service User {
   rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
 }
@@ -43,14 +49,27 @@ message CreateReminderModel {
   int64 offset_minutes = 2;
 }
 
+message UpdateOperationModel {
+  int64 id = 1;
+  string theme = 2;
+  string description = 3;
+  google.protobuf.Timestamp start_date = 4;
+  google.protobuf.StringValue cron = 5;
+}
+
+message UpdateReminderModel {
+  int64 id = 1;
+  string message_template = 2;
+  int64 offset_minutes = 3;
+}
+
 message OperationModel {
   int64 id = 1;
   string theme = 2;
   string description = 3;
   google.protobuf.Timestamp start_date = 4;
   google.protobuf.StringValue cron = 5;
-  TelegramUserModel user = 6;
-  repeated ReminderModel reminders = 7;
+  repeated ReminderModel reminders = 6;
 }
 
 message ReminderModel {
@@ -68,28 +87,18 @@ message OperationInstanceModel {
 }
 
 //Requests & Responses
+message StatusResponse {
+  string status_message = 1;
+  bool is_success = 2;
+}
+
 message CreateUserRequest {
   int64 telegram_id = 1;
 }
 
 message CreateUserResponse {
   TelegramUserModel user = 1;
-}
-
-message CreateOperationRequest {
-  int64 telegram_id = 1;
-  CreateOperationModel operation = 2;
-}
-
-message UpdateOperationRequest {
-  int64 telegram_id = 1;
-  int64 operation_id = 2;
-  CreateOperationModel operation = 3;
-}
-
-message DeleteOperationRequest {
-  int64 telegram_id = 1;
-  int64 operation_id = 2;
+  StatusResponse status = 2;
 }
 
 message PlanedOperationsRequest {
@@ -103,21 +112,61 @@ message PlanedOperationsRequest {
   }
 }
 
-message PlanedOperationsResponse {
-  repeated OperationInstanceModel instances = 1;
-}
-
 message OperationHistoryRequest {
   int64 telegram_id = 1;
 }
 
+message CreateOperationRequest {
+  int64 telegram_id = 1;
+  CreateOperationModel operation = 2;
+}
+
+message UpdateOperationRequest {
+  int64 telegram_id = 1;
+  UpdateOperationModel operation = 2;
+}
+
+message DeleteOperationRequest {
+  int64 telegram_id = 1;
+  int64 operation_id = 2;
+}
+
+message PlanedOperationsResponse {
+  repeated OperationInstanceModel instances = 1;
+  StatusResponse status = 2;
+}
+
 message OperationHistoryResponse {
   repeated OperationInstanceModel history = 1;
+  StatusResponse status = 2;
 }
 
 message OperationResponse {
   OperationModel operation = 1;
-  string status_message = 2;
+  StatusResponse status = 2;
+}
+
+message AddReminderRequest {
+  int64 telegram_id = 1;
+  int64 operation_id = 2;
+  CreateReminderModel reminder = 3;
+}
+
+message UpdateReminderRequest {
+  int64 telegram_id = 1;
+  int64 operation_id = 2;
+  UpdateReminderModel reminder = 3;
+}
+
+message DeleteReminderRequest {
+  int64 telegram_id = 1;
+  int64 operation_id = 2;
+  int64 reminder_id = 3;
+}
+
+message ReminderResponse {
+  ReminderModel reminder = 1;
+  StatusResponse status = 2;
 }
 
 message NotificationRequest {
