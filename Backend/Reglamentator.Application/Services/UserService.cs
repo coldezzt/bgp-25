@@ -19,7 +19,8 @@ public class UserService(
             tu => tu.TelegramId == userDto.TelegramId, cancellationToken);
 
         if (telegramUser != null)
-            return Result.Fail(new CreateUserError(CreateUserError.TelegramUserAlreadyExist));
+            return Result.Ok(telegramUser);
+            //return Result.Fail(new CreateUserError(CreateUserError.TelegramUserAlreadyExist));
         
         var user = CreateNewUser(userDto);
         await userRepository.InsertEntityAsync(user, cancellationToken);
