@@ -7,8 +7,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddEnvironmentVariables();
 
-builder.Services.AddGrpc();
-
+builder.Services.AddValidators();
+builder.Services.AddGrpcWithConfigure();
+    
 builder.Services.AddAutoMapperWithConfigure();
 builder.Services.AddApplicationServices();
 builder.Services.AddHangfire(builder.Configuration);
