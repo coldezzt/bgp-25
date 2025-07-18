@@ -17,6 +17,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Reglamentator.Application\Reglamentator.Application.csproj" />
+      <ProjectReference Include="..\Reglamentator.Data\Reglamentator.Data.csproj" />
     </ItemGroup>
 
 </Project>
