@@ -49,27 +49,7 @@ public class OperationService(
         if (await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
             return Result.Fail(new NotFoundError(NotFoundError.UserNotFound));
 
-        var operationInstance = new OperationInstance
-        {
-            ScheduledAt = DateTime.UtcNow,
-            Result = null,
-            ExecutedAt = null
-        };
-        var operation = new Operation
-        {
-            Theme = operationDto.Theme,
-            Description = operationDto.Description,
-            StartDate = operationDto.StartDate,
-            Cron = operationDto.Cron,
-            TelegramUserId = telegramId,
-            Reminders = operationDto.Reminders.Select(r => new Reminder
-            {
-                MessageTemplate = r.MessageTemplate,
-                OffsetBeforeExecution = TimeSpan.FromMinutes(r.OffsetMinutes)
-            }).ToList(),
-            NextOperationInstance = operationInstance,
-            History = [operationInstance]
-        };
+        var operation = CreateNewOperation(telegramId, operationDto);
         await operationRepository.InsertEntityAsync(operation, cancellationToken);
         
         hangfireOperationJobHelper.CreateJobsForOperation(operation);
@@ -94,10 +74,7 @@ public class OperationService(
         if (operation.TelegramUserId != telegramId)
             return Result.Fail(new PermissionError(PermissionError.UserNotAllowedToOperation));
 
-        operation.Theme = operationDto.Theme;
-        operation.Description = operationDto.Description;
-        operation.StartDate = operationDto.StartDate;
-        operation.Cron = operationDto.Cron;
+        UpdateOperationByDto(operation, operationDto);
         await operationRepository.UpdateEntityAsync(operation, cancellationToken);
         
         hangfireOperationJobHelper.UpdateJobsForOperation(operation);
@@ -127,5 +104,39 @@ public class OperationService(
         hangfireOperationJobHelper.DeleteJobsForOperation(operation);
         
         return Result.Ok(operation);
+    }
+
+    private Operation CreateNewOperation(long telegramId, CreateOperationDto operationDto)
+    {
+        var operationInstance = new OperationInstance
+        {
+            ScheduledAt = DateTime.UtcNow,
+            Result = null,
+            ExecutedAt = null
+        };
+        var operation = new Operation
+        {
+            Theme = operationDto.Theme,
+            Description = operationDto.Description,
+            StartDate = operationDto.StartDate,
+            Cron = operationDto.Cron,
+            TelegramUserId = telegramId,
+            Reminders = operationDto.Reminders.Select(r => new Reminder
+            {
+                MessageTemplate = r.MessageTemplate,
+                OffsetBeforeExecution = TimeSpan.FromMinutes(r.OffsetMinutes)
+            }).ToList(),
+            NextOperationInstance = operationInstance,
+            History = [operationInstance]
+        };
+        return operation;
+    }
+
+    private void UpdateOperationByDto(Operation operation, UpdateOperationDto operationDto)
+    {
+        operation.Theme = operationDto.Theme;
+        operation.Description = operationDto.Description;
+        operation.StartDate = operationDto.StartDate;
+        operation.Cron = operationDto.Cron;
     }
 }

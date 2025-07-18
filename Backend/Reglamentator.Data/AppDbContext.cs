@@ -4,7 +4,7 @@ using Reglamentator.Domain.Entities;
 
 namespace Reglamentator.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public class AppDbContext(DbContextOptions<AppDbContext> options): DbContext(options)
 {
     public DbSet<Operation> Operations => Set<Operation>();
     public DbSet<OperationInstance> OperationInstances => Set<OperationInstance>();

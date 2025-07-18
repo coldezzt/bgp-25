@@ -13,7 +13,5 @@ public class ReminderMappingProfile: Profile
         CreateMap<Domain.Entities.Reminder, ReminderDto>()
             .ForMember(dest => dest.OffsetMinutes, 
                 opt => opt.MapFrom(src => (long)src.OffsetBeforeExecution.TotalMinutes));
-        
-        
     }
 }

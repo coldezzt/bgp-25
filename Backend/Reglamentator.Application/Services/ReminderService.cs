@@ -32,12 +32,7 @@ public class ReminderService(
         if (operation.TelegramUserId != telegramId)
             return Result.Fail(new PermissionError(PermissionError.UserNotAllowedToOperation));
         
-        var reminder = new Reminder
-        {
-            MessageTemplate = reminderDto.MessageTemplate,
-            OffsetBeforeExecution = TimeSpan.FromMinutes(reminderDto.OffsetMinutes),
-            OperationId = operationId,
-        };
+        var reminder = CreateNewReminder(operationId, reminderDto);
         await reminderRepository.InsertEntityAsync(reminder, cancellationToken);
         
         hangfireReminderJobHelper.CreateJobForReminder(operation, reminder);
@@ -69,8 +64,7 @@ public class ReminderService(
         if (operation.TelegramUserId != telegramId || operation.Id != reminder.OperationId)
             return Result.Fail(new PermissionError(PermissionError.UserNotAllowedToOperation));
         
-        reminder.MessageTemplate = reminderDto.MessageTemplate;
-        reminder.OffsetBeforeExecution = TimeSpan.FromMinutes(reminderDto.OffsetMinutes);
+        UpdateReminderByDto(reminder, reminderDto);
         await reminderRepository.UpdateEntityAsync(reminder, cancellationToken);
         
         hangfireReminderJobHelper.UpdateJobForReminder(operation, reminder);
@@ -107,5 +101,19 @@ public class ReminderService(
         hangfireReminderJobHelper.DeleteJobForReminder(reminder);
         
         return Result.Ok(reminder);
+    }
+
+    private Reminder CreateNewReminder(long operationId, CreateReminderDto reminderDto) =>
+        new()
+        {
+            MessageTemplate = reminderDto.MessageTemplate,
+            OffsetBeforeExecution = TimeSpan.FromMinutes(reminderDto.OffsetMinutes),
+            OperationId = operationId,
+        };
+
+    private void UpdateReminderByDto(Reminder reminder, UpdateReminderDto reminderDto)
+    {
+        reminder.MessageTemplate = reminderDto.MessageTemplate;
+        reminder.OffsetBeforeExecution = TimeSpan.FromMinutes(reminderDto.OffsetMinutes);
     }
 }

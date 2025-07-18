@@ -19,14 +19,14 @@ public static class AddApplicationServicesExt
         return services;
     }
 
-    private static IServiceCollection AddApplicationManagers(this IServiceCollection services)
+    public static IServiceCollection AddApplicationManagers(this IServiceCollection services)
     {
         services.AddSingleton<INotificationStreamManager, NotificationStreamManager>();
         
         return services;
     }
 
-    private static IServiceCollection AddApplicationHelpers(this IServiceCollection services)
+    public static IServiceCollection AddApplicationHelpers(this IServiceCollection services)
     {
         services.AddSingleton<IHangfireReminderJobHelper, HangfireReminderJobHelper>();
         services.AddSingleton<IHangfireOperationJobHelper, HangfireOperationJobHelper>();

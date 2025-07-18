@@ -5,5 +5,6 @@ namespace Reglamentator.Domain.Interfaces;
 
 public interface IReminderRepository: IRepository<Reminder>
 {
-    Task<Reminder?> GetWithDetailsForProcessJobAsync(Expression<Func<Reminder, bool>> filter, CancellationToken cancellationToken = default);
+    Task<Reminder?> GetWithDetailsForProcessJobAsync(Expression<Func<Reminder, bool>> filter, 
+        CancellationToken cancellationToken = default);
 }

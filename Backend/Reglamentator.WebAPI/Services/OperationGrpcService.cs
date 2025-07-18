@@ -1,5 +1,4 @@
 using AutoMapper;
-using FluentResults;
 using Grpc.Core;
 using Reglamentator.Application.Abstractions;
 using Reglamentator.Domain.Entities;

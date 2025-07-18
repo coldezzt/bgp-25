@@ -6,5 +6,6 @@ namespace Reglamentator.Application.Abstractions;
 
 public interface IUserService
 {
-    Task<Result<TelegramUser>> CreateUserAsync(CreateUserDto userDto, CancellationToken cancellationToken = default);
+    Task<Result<TelegramUser>> CreateUserAsync(CreateUserDto userDto, 
+        CancellationToken cancellationToken = default);
 }

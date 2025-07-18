@@ -11,7 +11,9 @@ public class UserService(
     ITelegramUserRepository userRepository
     ): IUserService
 {
-    public async Task<Result<TelegramUser>> CreateUserAsync(CreateUserDto userDto, CancellationToken cancellationToken = default)
+    public async Task<Result<TelegramUser>> CreateUserAsync(
+        CreateUserDto userDto, 
+        CancellationToken cancellationToken = default)
     {
         var telegramUser = await userRepository.GetEntityByFilterAsync(
             tu => tu.TelegramId == userDto.TelegramId, cancellationToken);
@@ -19,12 +21,15 @@ public class UserService(
         if (telegramUser != null)
             return Result.Fail(new CreateUserError(CreateUserError.TelegramUserAlreadyExist));
         
-        var user = new TelegramUser()
-        {
-            TelegramId = userDto.TelegramId
-        };
+        var user = CreateNewUser(userDto);
         await userRepository.InsertEntityAsync(user, cancellationToken);
         
         return Result.Ok(user);
     }
+
+    private TelegramUser CreateNewUser(CreateUserDto userDto) =>
+        new()
+        {
+            TelegramId = userDto.TelegramId
+        };
 }

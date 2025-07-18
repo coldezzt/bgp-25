@@ -4,5 +4,4 @@ namespace Reglamentator.Domain.Interfaces;
 
 public interface ITelegramUserRepository: IRepository<TelegramUser>
 {
-    
 }

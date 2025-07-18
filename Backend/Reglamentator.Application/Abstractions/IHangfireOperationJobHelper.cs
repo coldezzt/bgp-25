@@ -4,7 +4,7 @@ namespace Reglamentator.Application.Abstractions;
 
 public interface IHangfireOperationJobHelper
 {
-    public void CreateJobsForOperation(Operation operation);
-    public void UpdateJobsForOperation(Operation operation);
-    public void DeleteJobsForOperation(Operation operation);
+    void CreateJobsForOperation(Operation operation);
+    void UpdateJobsForOperation(Operation operation);
+    void DeleteJobsForOperation(Operation operation);
 }

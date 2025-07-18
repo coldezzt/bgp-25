@@ -12,12 +12,16 @@ public abstract class Repository<T>(AppDbContext appDbContext): IRepository<T> w
         await AppDbContext.Set<T>()
             .AnyAsync(e => e.Id == id, cancellationToken);
     
-    public virtual async Task<List<T>> GetEntitiesByFilterAsync(Expression<Func<T, bool>> filter, CancellationToken cancellationToken = default) =>
+    public virtual async Task<List<T>> GetEntitiesByFilterAsync(
+        Expression<Func<T, bool>> filter, 
+        CancellationToken cancellationToken = default) =>
         await AppDbContext.Set<T>()
             .Where(filter)
             .ToListAsync(cancellationToken);
 
-    public virtual async Task<T?> GetEntityByFilterAsync(Expression<Func<T, bool>> filter, CancellationToken cancellationToken = default) => 
+    public virtual async Task<T?> GetEntityByFilterAsync(
+        Expression<Func<T, bool>> filter, 
+        CancellationToken cancellationToken = default) => 
         await AppDbContext.Set<T>()
             .SingleOrDefaultAsync(filter, cancellationToken);
 
