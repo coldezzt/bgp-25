@@ -1,6 +1,6 @@
 using Grpc.Core;
 using Reglamentator.Application.Abstractions;
-using Reglamentator.WebAPI.Adapters;
+using Reglamentator.WebAPI.Mapping.Adapters;
 
 namespace Reglamentator.WebAPI.Services;
 

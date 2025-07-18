@@ -1,7 +1,7 @@
 using Grpc.Core;
 using Reglamentator.Application.Dtos;
 
-namespace Reglamentator.WebAPI.Adapters;
+namespace Reglamentator.WebAPI.Mapping.Adapters;
 
 public class GrpcNotificationStreamAdapter(
     IServerStreamWriter<NotificationResponse> grpcStream
