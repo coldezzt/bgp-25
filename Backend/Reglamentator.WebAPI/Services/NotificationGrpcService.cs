@@ -1,11 +1,31 @@
 using Grpc.Core;
+using Reglamentator.Application.Abstractions;
 
 namespace Reglamentator.WebAPI.Services;
 
-public class NotificationGrpcService: Notification.NotificationBase
+public class NotificationGrpcService(
+    INotificationStreamManager<NotificationResponse> notificationStreamManager
+    ): Notification.NotificationBase
 {
-    public override Task ListenForNotifications(NotificationRequest request, IServerStreamWriter<NotificationResponse> responseStream, ServerCallContext context)
+
+    public override async Task ListenForNotifications(
+        NotificationRequest request,
+        IServerStreamWriter<NotificationResponse> responseStream,
+        ServerCallContext context)
     {
-        return base.ListenForNotifications(request, responseStream, context);
+        var id = notificationStreamManager.RegisterConsumer(responseStream);
+
+        try
+        {
+            while (!context.CancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromMinutes(15), context.CancellationToken);
+            }
+        }
+        catch (TaskCanceledException) { }
+        finally
+        {
+            notificationStreamManager.RemoveConsumer(id);
+        }
     }
 }
