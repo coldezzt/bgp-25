@@ -1,10 +1,11 @@
 using Grpc.Core;
 using Reglamentator.Application.Abstractions;
+using Reglamentator.WebAPI.Adapters;
 
 namespace Reglamentator.WebAPI.Services;
 
 public class NotificationGrpcService(
-    INotificationStreamManager<NotificationResponse> notificationStreamManager
+    INotificationStreamManager notificationStreamManager
     ): Notification.NotificationBase
 {
 
@@ -13,7 +14,8 @@ public class NotificationGrpcService(
         IServerStreamWriter<NotificationResponse> responseStream,
         ServerCallContext context)
     {
-        var id = notificationStreamManager.RegisterConsumer(responseStream);
+        var adapter = new GrpcNotificationStreamAdapter(responseStream);
+        var id = notificationStreamManager.RegisterConsumer(adapter);
 
         try
         {
