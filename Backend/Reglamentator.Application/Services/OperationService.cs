@@ -10,7 +10,8 @@ namespace Reglamentator.Application.Services;
 public class OperationService(
     ITelegramUserRepository telegramUserRepository,
     IOperationRepository operationRepository,
-    IOperationInstanceRepository operationInstanceRepository
+    IOperationInstanceRepository operationInstanceRepository,
+    IHangfireOperationJobHelper hangfireOperationJobHelper
     ): IOperationService
 {
     public async Task<Result<List<OperationInstance>>> GetPlanedOperationsAsync(
@@ -48,6 +49,12 @@ public class OperationService(
         if (await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
             return Result.Fail(new NotFoundError(NotFoundError.UserNotFound));
 
+        var operationInstance = new OperationInstance
+        {
+            ScheduledAt = DateTime.UtcNow,
+            Result = null,
+            ExecutedAt = null
+        };
         var operation = new Operation
         {
             Theme = operationDto.Theme,
@@ -60,15 +67,12 @@ public class OperationService(
                 MessageTemplate = r.MessageTemplate,
                 OffsetBeforeExecution = TimeSpan.FromMinutes(r.OffsetMinutes)
             }).ToList(),
-            History = [
-                new OperationInstance
-                {
-                    ScheduledAt = operationDto.StartDate,
-                    Result = null,
-                    ExecutedAt = null
-                }]
+            NextOperationInstance = operationInstance,
+            History = [operationInstance]
         };
         await operationRepository.InsertEntityAsync(operation, cancellationToken);
+        
+        hangfireOperationJobHelper.CreateJobsForOperation(operation);
         
         return Result.Ok(operation);
     }
@@ -96,6 +100,8 @@ public class OperationService(
         operation.Cron = operationDto.Cron;
         await operationRepository.UpdateEntityAsync(operation, cancellationToken);
         
+        hangfireOperationJobHelper.UpdateJobsForOperation(operation);
+        
         return Result.Ok(operation);
     }
 
@@ -117,6 +123,8 @@ public class OperationService(
             return Result.Fail(new PermissionError(PermissionError.UserNotAllowedToOperation));
 
         await operationRepository.DeleteEntityAsync(operation, cancellationToken);
+
+        hangfireOperationJobHelper.DeleteJobsForOperation(operation);
         
         return Result.Ok(operation);
     }

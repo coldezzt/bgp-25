@@ -10,7 +10,8 @@ namespace Reglamentator.Application.Services;
 public class ReminderService(
     ITelegramUserRepository telegramUserRepository,
     IOperationRepository operationRepository,
-    IReminderRepository reminderRepository
+    IReminderRepository reminderRepository,
+    IHangfireReminderJobHelper hangfireReminderJobHelper
     ): IReminderService
 {
     public async Task<Result<Reminder>> AddReminderAsync(
@@ -38,6 +39,8 @@ public class ReminderService(
             OperationId = operationId,
         };
         await reminderRepository.InsertEntityAsync(reminder, cancellationToken);
+        
+        hangfireReminderJobHelper.CreateJobForReminder(operation, reminder);
         
         return Result.Ok(reminder);
     }
@@ -70,6 +73,8 @@ public class ReminderService(
         reminder.OffsetBeforeExecution = TimeSpan.FromMinutes(reminderDto.OffsetMinutes);
         await reminderRepository.UpdateEntityAsync(reminder, cancellationToken);
         
+        hangfireReminderJobHelper.UpdateJobForReminder(operation, reminder);
+        
         return Result.Ok(reminder);
     }
 
@@ -98,6 +103,8 @@ public class ReminderService(
             return Result.Fail(new PermissionError(PermissionError.UserNotAllowedToOperation));
         
         await reminderRepository.DeleteEntityAsync(reminder, cancellationToken);
+        
+        hangfireReminderJobHelper.DeleteJobForReminder(reminder);
         
         return Result.Ok(reminder);
     }
