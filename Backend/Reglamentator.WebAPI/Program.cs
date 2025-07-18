@@ -2,6 +2,8 @@ using Reglamentator.WebAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddEnvironmentVariables();
+
 builder.Services.AddGrpc();
 
 var app = builder.Build();
