@@ -23,6 +23,9 @@ public class Operation : IEntity
 
     public long TelegramUserId { get; set; }
     public TelegramUser TelegramUser { get; set; } = null!;
+    
+    public long NextOperationInstanceId { get; set; }
+    public OperationInstance NextOperationInstance { get; set; } = null!;
 
     public List<Reminder> Reminders { get; set; } = null!;
     public List<OperationInstance> History { get; set; } = null!;
