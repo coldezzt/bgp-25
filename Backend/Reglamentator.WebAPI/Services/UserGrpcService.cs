@@ -14,7 +14,9 @@ public class UserGrpcService(
 {
     public override async Task<CreateUserResponse> CreateUser(CreateUserRequest request, ServerCallContext context)
     {
-        var result = await userService.CreateUserAsync(new CreateUserDto{TelegramId = request.TelegramId});
+        var result = await userService.CreateUserAsync(
+            new CreateUserDto{TelegramId = request.TelegramId},
+            context.CancellationToken);
 
         return new CreateUserResponse
         {
