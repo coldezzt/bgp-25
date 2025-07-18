@@ -1,10 +1,11 @@
 using Grpc.Core;
+using Reglamentator.Application.Dtos;
 
 namespace Reglamentator.Application.Abstractions;
 
-public interface INotificationStreamManager<T>
+public interface INotificationStreamManager
 {
-    Guid RegisterConsumer(IServerStreamWriter<T> stream);
+    Guid RegisterConsumer(IServerStreamWriter<NotificationResponseDto> stream);
     void RemoveConsumer(Guid id);
-    Task BroadcastNotificationAsync(T notification);
+    Task BroadcastNotificationAsync(NotificationResponseDto notification);
 }

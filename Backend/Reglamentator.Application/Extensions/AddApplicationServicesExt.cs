@@ -16,9 +16,9 @@ public static class AddApplicationServicesExt
         return services;
     }
     
-    public static IServiceCollection AddNotificationManager<T>(this IServiceCollection services)
+    public static IServiceCollection AddApplicationManagers(this IServiceCollection services)
     {
-        services.AddSingleton<INotificationStreamManager<T>, NotificationStreamManager<T>>();
+        services.AddSingleton<INotificationStreamManager, NotificationStreamManager>();
         
         return services;
     }
