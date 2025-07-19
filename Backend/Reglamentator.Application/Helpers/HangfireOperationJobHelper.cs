@@ -15,14 +15,14 @@ public class HangfireOperationJobHelper(
 {
     public void CreateJobsForOperation(Operation operation)
     {
-        if (operation.Cron != null)
-        {
-            recurringJobManager.AddOrUpdate(
-                GetOperationJobId(operation.Id),
-                () => ProcessOperationJob(operation.Id),
-                operation.Cron);
-        }
+        if (operation.NextOperationInstance.ExecutedAt != null) 
+            return;
         
+        recurringJobManager.AddOrUpdate(
+            GetOperationJobId(operation.Id),
+            () => ProcessOperationJob(operation.Id),
+            GetOperationCron(operation));
+            
         foreach (var reminder in operation.Reminders)
         {
             hangfireReminderJobHelper.CreateJobForReminder(operation, reminder);
@@ -31,17 +31,13 @@ public class HangfireOperationJobHelper(
     
     public void UpdateJobsForOperation(Operation operation)
     {
-        if (operation.Cron != null)
-        {
-            recurringJobManager.AddOrUpdate(
-                GetOperationJobId(operation.Id),
-                () => ProcessOperationJob(operation.Id),
-                operation.Cron);
-        }
-        else
-        {
-            DeleteJobForOperation(operation.Id);
-        }
+        if (operation.NextOperationInstance.ExecutedAt != null) 
+            return;
+        
+        recurringJobManager.AddOrUpdate(
+            GetOperationJobId(operation.Id),
+            () => ProcessOperationJob(operation.Id),
+            GetOperationCron(operation));
         
         foreach (var reminder in operation.Reminders)
         {
@@ -51,20 +47,51 @@ public class HangfireOperationJobHelper(
 
     public void DeleteJobsForOperation(Operation operation)
     {
-        DeleteJobForOperation(operation.Id);
+        recurringJobManager.RemoveIfExists(GetOperationJobId(operation.Id));
         
         foreach (var reminder in operation.Reminders)
         {
             hangfireReminderJobHelper.DeleteJobForReminder(reminder);
         }
     }
-
-    private void DeleteJobForOperation(long operationId)
-    {
-        recurringJobManager.RemoveIfExists(GetOperationJobId(operationId));
-    }
     
     private string GetOperationJobId(long operationId) => $"operation-{operationId}";
+    
+    private string GetOperationCron(Operation operation)
+    {
+        var startDate = operation.StartDate;
+        return $"{startDate.Minute} {startDate.Hour} {startDate.Day} {startDate.Month} *";
+    }
+
+    private void ProcessPastOperation(OperationInstance operationInstance)
+    {
+        operationInstance.ExecutedAt = DateTime.UtcNow;
+        operationInstance.Result = "Done";
+    }
+    
+    private void ProcessCronOperationCreation(Operation operation)
+    {
+        var now = DateTime.UtcNow;
+        operation.StartDate = GetNextOccurrence(operation);
+
+        var newOperationInstance = new OperationInstance
+        {
+            ScheduledAt = now,
+            OperationId = operation.Id,
+            Result = null,
+            ExecutedAt = null
+        };
+        
+        operation.NextOperationInstance = newOperationInstance;
+    }
+    
+    private DateTime GetNextOccurrence(Operation operation)
+    {
+        var cronExpression = CrontabSchedule.Parse(operation!.Cron);
+        var nextOccurrence = cronExpression.GetNextOccurrence(operation.StartDate);
+        
+        return nextOccurrence;
+    }
     
     public async Task ProcessOperationJob(long operationId)
     {
@@ -73,29 +100,19 @@ public class HangfireOperationJobHelper(
         
         var operation = await operationRepository.GetWithDetailsForProcessJobAsync(
             op => op.Id == operationId);
-        
-        var now = DateTime.UtcNow;
-        var cronExpression = CrontabSchedule.Parse(operation!.Cron);
-        var nextOccurrence = cronExpression.GetNextOccurrence(operation.StartDate);
-        operation.StartDate = nextOccurrence;
-        operation.NextOperationInstance.ExecutedAt = now;
-        operation.NextOperationInstance.Result = "Done";
 
-        var newOperationInstance = new OperationInstance
+        ProcessPastOperation(operation!.NextOperationInstance);
+
+        if (operation.Cron != null)
         {
-            ScheduledAt = now,
-            OperationId = operationId,
-            Result = null,
-            ExecutedAt = null
-        };
-        
-        operation.NextOperationInstance = newOperationInstance;
+            ProcessCronOperationCreation(operation);
+            CreateJobsForOperation(operation);
+        }
+        else
+        {
+            DeleteJobsForOperation(operation);
+        }
         
         await operationRepository.UpdateEntityAsync(operation);
-
-        foreach (var reminder in operation.Reminders)
-        {
-            hangfireReminderJobHelper.CreateJobForReminder(operation, reminder);
-        }
     }
 }

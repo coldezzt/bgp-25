@@ -1,4 +1,5 @@
 using FluentResults;
+using NCrontab;
 using Reglamentator.Application.Abstractions;
 using Reglamentator.Application.Dtos;
 using Reglamentator.Application.Errors;
@@ -66,7 +67,7 @@ public class OperationService(
         if (await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
             return Result.Fail(new NotFoundError(NotFoundError.UserNotFound));
         
-        var operation = await operationRepository.GetEntityByFilterAsync(
+        var operation = await operationRepository.GetWithDetailsForProcessJobAsync(
             op => op.Id == operationDto.Id, cancellationToken);
         
         if (operation == null)
@@ -75,7 +76,7 @@ public class OperationService(
         if (operation.TelegramUserId != telegramId)
             return Result.Fail(new PermissionError(PermissionError.UserNotAllowedToOperation));
 
-        UpdateOperationByDto(operation, operationDto);
+        UpdateOperation(operation, operationDto);
         await operationRepository.UpdateEntityAsync(operation, cancellationToken);
         
         hangfireOperationJobHelper.UpdateJobsForOperation(operation);
@@ -109,9 +110,10 @@ public class OperationService(
 
     private Operation CreateNewOperation(long telegramId, CreateOperationDto operationDto)
     {
+        var now = DateTime.UtcNow;
         var operationInstance = new OperationInstance
         {
-            ScheduledAt = DateTime.UtcNow,
+            ScheduledAt = now,
             Result = null,
             ExecutedAt = null
         };
@@ -120,19 +122,95 @@ public class OperationService(
             Theme = operationDto.Theme,
             Description = operationDto.Description,
             StartDate = operationDto.StartDate,
-            Cron = operationDto.Cron.ToCronExpression(),
+            Cron = operationDto.Cron.ToCronExpression(operationDto.StartDate),
             TelegramUserId = telegramId,
             NextOperationInstance = operationInstance,
             History = [operationInstance]
         };
+        if (now <= operationDto.StartDate) 
+            return operation;
+        
+        ProcessPastOperation(operationInstance, operationDto);
+        
+        if (operation.Cron == null) 
+            return operation;
+        
+        ProcessCronOperationCreation(operation);
+        
         return operation;
     }
-
-    private void UpdateOperationByDto(Operation operation, UpdateOperationDto operationDto)
+    
+    private void UpdateOperation(Operation operation, UpdateOperationDto operationDto)
     {
+        var now = DateTime.UtcNow;
+        
         operation.Theme = operationDto.Theme;
         operation.Description = operationDto.Description;
+        operation.Cron = operationDto.Cron.ToCronExpression(operationDto.StartDate);
+        
+        if (now > operationDto.StartDate)
+        {
+            ProcessPastOperation(operation.NextOperationInstance, operationDto);
+            if (operation.Cron != null)
+            {
+                ProcessCronOperationUpdate(operation);
+            }
+        }
+        
         operation.StartDate = operationDto.StartDate;
-        operation.Cron = operationDto.Cron.ToCronExpression();
+    }
+    
+    private void ProcessPastOperation(OperationInstance operationInstance, CreateOperationDto operationDto)
+    {
+        operationInstance.ScheduledAt = operationDto.StartDate;
+        operationInstance.Result = "Done";
+        operationInstance.ExecutedAt = operationDto.StartDate;
+    }
+    
+    private void ProcessPastOperation(OperationInstance operationInstance, UpdateOperationDto operationDto)
+    {
+        operationInstance.ScheduledAt = operationDto.StartDate;
+        operationInstance.Result = "Done";
+        operationInstance.ExecutedAt = operationDto.StartDate;
+    }
+
+    private void ProcessCronOperationCreation(Operation operation)
+    {
+        var now = DateTime.UtcNow;
+        operation.StartDate = GetNextOccurrence(operation);
+
+        var newOperationInstance = new OperationInstance
+        {
+            ScheduledAt = now,
+            Result = null,
+            ExecutedAt = null
+        };
+        
+        operation.NextOperationInstance = newOperationInstance;
+        operation.History.Add(newOperationInstance);
+    }
+    
+    private void ProcessCronOperationUpdate(Operation operation)
+    {
+        var now = DateTime.UtcNow;
+        operation.StartDate = GetNextOccurrence(operation);
+
+        var newOperationInstance = new OperationInstance
+        {
+            ScheduledAt = now,
+            OperationId = operation.Id,
+            Result = null,
+            ExecutedAt = null
+        };
+        
+        operation.NextOperationInstance = newOperationInstance;
+    }
+
+    private DateTime GetNextOccurrence(Operation operation)
+    {
+        var cronExpression = CrontabSchedule.Parse(operation.Cron);
+        var nextOccurrence = cronExpression.GetNextOccurrence(operation.StartDate);
+        
+        return nextOccurrence;
     }
 }
