@@ -13,8 +13,5 @@ public class CreateOperationDtoValidator: AbstractValidator<CreateOperationDto>
         RuleFor(x => x.StartDate)
             .NotNull()
             .WithMessage("Дата начала обязательна");
-            
-        RuleForEach(x => x.Reminders)
-            .SetValidator(new CreateReminderDtoValidator());
     }
 }
