@@ -40,13 +40,13 @@ message CreateOperationDto {
   string theme = 1;
   string description = 2;
   google.protobuf.Timestamp start_date = 3;
-  google.protobuf.StringValue cron = 4;
+  TimeRange cron = 4;
   repeated CreateReminderDto reminders = 5;
 }
 
 message CreateReminderDto {
   string message_template = 1;
-  int64 offset_minutes = 2;
+  TimeRange offset_before_execution = 2;
 }
 
 message UpdateOperationDto {
@@ -54,13 +54,13 @@ message UpdateOperationDto {
   string theme = 2;
   string description = 3;
   google.protobuf.Timestamp start_date = 4;
-  google.protobuf.StringValue cron = 5;
+  TimeRange cron = 5;
 }
 
 message UpdateReminderDto {
   int64 id = 1;
   string message_template = 2;
-  int64 offset_minutes = 3;
+  TimeRange offset_before_execution = 3;
 }
 
 message OperationDto {
@@ -68,14 +68,14 @@ message OperationDto {
   string theme = 2;
   string description = 3;
   google.protobuf.Timestamp start_date = 4;
-  google.protobuf.StringValue cron = 5;
+  TimeRange cron = 5;
   repeated ReminderDto reminders = 6;
 }
 
 message ReminderDto {
   int64 id = 1;
   string message_template = 2;
-  int64 offset_minutes = 3;
+  TimeRange offset_before_execution = 3;
 }
 
 message OperationInstanceDto {
@@ -87,9 +87,12 @@ message OperationInstanceDto {
 }
 
 enum TimeRange {
-  DAY = 0;
-  WEEK = 1;
-  MONTH = 2;
+  NONE = 0;
+  MIN15 = 1;
+  HOUR = 2;
+  DAY = 3;
+  WEEK = 4;
+  MONTH = 5;
 }
 
 //Requests & Responses

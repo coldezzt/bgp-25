@@ -2,6 +2,7 @@ using FluentResults;
 using Reglamentator.Application.Abstractions;
 using Reglamentator.Application.Dtos;
 using Reglamentator.Application.Errors;
+using Reglamentator.Application.Extensions;
 using Reglamentator.Domain.Entities;
 using Reglamentator.Domain.Interfaces;
 
@@ -119,12 +120,12 @@ public class OperationService(
             Theme = operationDto.Theme,
             Description = operationDto.Description,
             StartDate = operationDto.StartDate,
-            Cron = operationDto.Cron,
+            Cron = operationDto.Cron.ToCronExpression(),
             TelegramUserId = telegramId,
             Reminders = operationDto.Reminders.Select(r => new Reminder
             {
                 MessageTemplate = r.MessageTemplate,
-                OffsetBeforeExecution = TimeSpan.FromMinutes(r.OffsetMinutes)
+                OffsetBeforeExecution = r.OffsetBeforeExecution.ToTimeSpan(),
             }).ToList(),
             NextOperationInstance = operationInstance,
             History = [operationInstance]
@@ -137,6 +138,6 @@ public class OperationService(
         operation.Theme = operationDto.Theme;
         operation.Description = operationDto.Description;
         operation.StartDate = operationDto.StartDate;
-        operation.Cron = operationDto.Cron;
+        operation.Cron = operationDto.Cron.ToCronExpression();
     }
 }

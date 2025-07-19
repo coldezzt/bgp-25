@@ -1,4 +1,5 @@
 using AutoMapper;
+using Reglamentator.Application.Extensions;
 
 namespace Reglamentator.WebAPI.Mapping;
 
@@ -6,12 +7,16 @@ public class ReminderMappingProfile: Profile
 {
     public ReminderMappingProfile()
     {
-        CreateMap<CreateReminderDto, Application.Dtos.CreateReminderDto>();
+        CreateMap<CreateReminderDto, Application.Dtos.CreateReminderDto>()
+            .ForMember(dest => dest.OffsetBeforeExecution,
+                opt => opt.MapFrom(src => src.OffsetBeforeExecution));
         
-        CreateMap<UpdateReminderDto, Application.Dtos.UpdateReminderDto>();
+        CreateMap<UpdateReminderDto, Application.Dtos.UpdateReminderDto>()
+            .ForMember(dest => dest.OffsetBeforeExecution,
+                opt => opt.MapFrom(src => src.OffsetBeforeExecution));
         
         CreateMap<Domain.Entities.Reminder, ReminderDto>()
-            .ForMember(dest => dest.OffsetMinutes, 
-                opt => opt.MapFrom(src => (long)src.OffsetBeforeExecution.TotalMinutes));
+            .ForMember(dest => dest.OffsetBeforeExecution,
+                opt => opt.MapFrom(src => src.OffsetBeforeExecution.ToTimeRange()));
     }
 }

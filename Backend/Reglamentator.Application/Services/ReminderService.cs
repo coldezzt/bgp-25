@@ -2,6 +2,7 @@ using FluentResults;
 using Reglamentator.Application.Abstractions;
 using Reglamentator.Application.Dtos;
 using Reglamentator.Application.Errors;
+using Reglamentator.Application.Extensions;
 using Reglamentator.Domain.Entities;
 using Reglamentator.Domain.Interfaces;
 
@@ -107,13 +108,13 @@ public class ReminderService(
         new()
         {
             MessageTemplate = reminderDto.MessageTemplate,
-            OffsetBeforeExecution = TimeSpan.FromMinutes(reminderDto.OffsetMinutes),
+            OffsetBeforeExecution = reminderDto.OffsetBeforeExecution.ToTimeSpan(),
             OperationId = operationId,
         };
 
     private void UpdateReminderByDto(Reminder reminder, UpdateReminderDto reminderDto)
     {
         reminder.MessageTemplate = reminderDto.MessageTemplate;
-        reminder.OffsetBeforeExecution = TimeSpan.FromMinutes(reminderDto.OffsetMinutes);
+        reminder.OffsetBeforeExecution = reminderDto.OffsetBeforeExecution.ToTimeSpan();
     }
 }
