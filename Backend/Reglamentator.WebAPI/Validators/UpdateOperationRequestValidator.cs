@@ -1,5 +1,4 @@
 using FluentValidation;
-using Google.Protobuf.WellKnownTypes;
 
 namespace Reglamentator.WebAPI.Validators;
 

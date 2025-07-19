@@ -1,5 +1,4 @@
 using FluentValidation;
-using Google.Protobuf.WellKnownTypes;
 
 namespace Reglamentator.WebAPI.Validators;
 
@@ -18,15 +17,9 @@ public class UpdateOperationDtoValidator: AbstractValidator<UpdateOperationDto>
         RuleFor(x => x.Description)
             .NotEmpty()
             .WithMessage("Описание операции обязательно");
-            
+
         RuleFor(x => x.StartDate)
             .NotNull()
-            .WithMessage("Дата начала обязательна")
-            .Must(BeValidDate)
-            .WithMessage("Дата начала должна быть в будущем");
-    }
-    private bool BeValidDate(Timestamp date)
-    {
-        return date.ToDateTime() >= DateTime.UtcNow;
+            .WithMessage("Дата начала обязательна");
     }
 }

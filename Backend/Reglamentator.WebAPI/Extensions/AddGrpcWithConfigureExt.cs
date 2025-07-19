@@ -1,4 +1,4 @@
-using Reglamentator.WebAPI.Validators;
+using Reglamentator.WebAPI.Validation;
 
 namespace Reglamentator.WebAPI.Extensions;
 

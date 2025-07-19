@@ -1,10 +1,8 @@
-using FluentResults;
 using FluentValidation;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
-using Reglamentator.WebAPI.Extensions;
 
-namespace Reglamentator.WebAPI.Validators;
+namespace Reglamentator.WebAPI.Validation;
 
 public class ValidationInterceptor(IServiceProvider serviceProvider)
     : Interceptor
