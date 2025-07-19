@@ -1,4 +1,4 @@
-using Reglamentator.WebAPI.Mapping;
+using Reglamentator.WebAPI.Mapping.Profiles;
 
 namespace Reglamentator.WebAPI.Extensions;
 

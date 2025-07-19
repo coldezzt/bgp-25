@@ -2,7 +2,7 @@ using AutoMapper;
 using Google.Protobuf.WellKnownTypes;
 using Reglamentator.Application.Extensions;
 
-namespace Reglamentator.WebAPI.Mapping;
+namespace Reglamentator.WebAPI.Mapping.Profiles;
 
 public class OperationMappingProfile: Profile
 {

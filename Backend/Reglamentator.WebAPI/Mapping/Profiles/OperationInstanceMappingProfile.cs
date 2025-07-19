@@ -1,7 +1,7 @@
 using AutoMapper;
 using Google.Protobuf.WellKnownTypes;
 
-namespace Reglamentator.WebAPI.Mapping;
+namespace Reglamentator.WebAPI.Mapping.Profiles;
 
 public class OperationInstanceMappingProfile: Profile
 {

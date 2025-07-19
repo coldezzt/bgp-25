@@ -1,6 +1,6 @@
 using AutoMapper;
 
-namespace Reglamentator.WebAPI.Mapping;
+namespace Reglamentator.WebAPI.Mapping.Profiles;
 
 public class TimeRangeMappingProfile: Profile
 {
