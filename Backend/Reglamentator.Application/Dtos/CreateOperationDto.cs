@@ -8,5 +8,4 @@ public class CreateOperationDto
     public string Description { get; set; } = null!;
     public DateTime StartDate { get; set; }
     public TimeRange Cron { get; set; }
-    public List<CreateReminderDto> Reminders { get; set; } = null!;
 }

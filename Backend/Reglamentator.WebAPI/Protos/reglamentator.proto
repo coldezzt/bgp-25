@@ -41,7 +41,6 @@ message CreateOperationDto {
   string description = 2;
   google.protobuf.Timestamp start_date = 3;
   TimeRange cron = 4;
-  repeated CreateReminderDto reminders = 5;
 }
 
 message CreateReminderDto {

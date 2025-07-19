@@ -11,8 +11,6 @@ public class OperationMappingProfile: Profile
         CreateMap<CreateOperationDto, Application.Dtos.CreateOperationDto>()
             .ForMember(dest => dest.StartDate,
                 opt => opt.MapFrom(src => src.StartDate.ToDateTime()))
-            .ForMember(dest => dest.Reminders,
-                opt => opt.MapFrom(src => src.Reminders))
             .ForMember(dest => dest.Cron,
             opt => opt.MapFrom(src => src.Cron));
         

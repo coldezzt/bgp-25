@@ -122,11 +122,6 @@ public class OperationService(
             StartDate = operationDto.StartDate,
             Cron = operationDto.Cron.ToCronExpression(),
             TelegramUserId = telegramId,
-            Reminders = operationDto.Reminders.Select(r => new Reminder
-            {
-                MessageTemplate = r.MessageTemplate,
-                OffsetBeforeExecution = r.OffsetBeforeExecution.ToTimeSpan(),
-            }).ToList(),
             NextOperationInstance = operationInstance,
             History = [operationInstance]
         };
