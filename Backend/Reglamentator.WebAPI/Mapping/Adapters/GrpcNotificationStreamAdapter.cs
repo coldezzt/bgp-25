@@ -1,14 +1,13 @@
 using Grpc.Core;
+using Reglamentator.Application.Abstractions;
 using Reglamentator.Application.Dtos;
 
 namespace Reglamentator.WebAPI.Mapping.Adapters;
 
 public class GrpcNotificationStreamAdapter(
     IServerStreamWriter<NotificationResponse> grpcStream
-    ): IServerStreamWriter<NotificationResponseDto>
+    ): IStreamWriter<NotificationResponseDto>
 {
-    public WriteOptions? WriteOptions { get; set; }
-
     public async Task WriteAsync(NotificationResponseDto message)
     {
         var grpcMessage = new NotificationResponse

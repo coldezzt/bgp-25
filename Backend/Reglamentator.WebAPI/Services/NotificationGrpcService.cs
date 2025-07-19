@@ -8,7 +8,6 @@ public class NotificationGrpcService(
     INotificationStreamManager notificationStreamManager
     ): Notification.NotificationBase
 {
-
     public override async Task ListenForNotifications(
         NotificationRequest request,
         IServerStreamWriter<NotificationResponse> responseStream,

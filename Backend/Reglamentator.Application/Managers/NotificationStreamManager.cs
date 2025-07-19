@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using Grpc.Core;
 using Reglamentator.Application.Abstractions;
 using Reglamentator.Application.Dtos;
 
@@ -7,9 +6,9 @@ namespace Reglamentator.Application.Managers;
 
 public class NotificationStreamManager: INotificationStreamManager
 {
-    private readonly ConcurrentDictionary<Guid, IServerStreamWriter<NotificationResponseDto>> _streams = [];
+    private readonly ConcurrentDictionary<Guid, IStreamWriter<NotificationResponseDto>> _streams = [];
 
-    public Guid RegisterConsumer(IServerStreamWriter<NotificationResponseDto> stream)
+    public Guid RegisterConsumer(IStreamWriter<NotificationResponseDto> stream)
     {
         var id = Guid.NewGuid();
         _streams.TryAdd(id, stream);
