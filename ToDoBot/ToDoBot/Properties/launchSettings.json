@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ToDoBot": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
