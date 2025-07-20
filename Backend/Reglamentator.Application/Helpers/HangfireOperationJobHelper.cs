@@ -15,7 +15,7 @@ public class HangfireOperationJobHelper(
 {
     public void CreateJobsForOperation(Operation operation)
     {
-        if (operation.NextOperationInstance.ExecutedAt != null) 
+        if (operation.NextOperationInstance == null) 
             return;
         
         recurringJobManager.AddOrUpdate(
@@ -31,7 +31,7 @@ public class HangfireOperationJobHelper(
     
     public void UpdateJobsForOperation(Operation operation)
     {
-        if (operation.NextOperationInstance.ExecutedAt != null) 
+        if (operation.NextOperationInstance == null) 
             return;
         
         recurringJobManager.AddOrUpdate(
@@ -87,7 +87,7 @@ public class HangfireOperationJobHelper(
     
     private DateTime GetNextOccurrence(Operation operation)
     {
-        var cronExpression = CrontabSchedule.Parse(operation!.Cron);
+        var cronExpression = CrontabSchedule.Parse(operation.Cron);
         var nextOccurrence = cronExpression.GetNextOccurrence(operation.StartDate);
         
         return nextOccurrence;
@@ -101,8 +101,9 @@ public class HangfireOperationJobHelper(
         var operation = await operationRepository.GetWithDetailsForProcessJobAsync(
             op => op.Id == operationId);
 
-        ProcessPastOperation(operation!.NextOperationInstance);
-
+        ProcessPastOperation(operation!.NextOperationInstance!);
+        operation.NextOperationInstance = null;
+        
         if (operation.Cron != null)
         {
             ProcessCronOperationCreation(operation);

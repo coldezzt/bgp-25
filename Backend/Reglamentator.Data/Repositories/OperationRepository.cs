@@ -24,4 +24,32 @@ public class OperationRepository(
                 .Where(filter)
                 .Include(op => op.Reminders)
                 .SingleOrDefaultAsync(cancellationToken);
+
+    public override async Task InsertEntityAsync(
+        Operation operation, 
+        CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await AppDbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            var isNextOperationInstanceNull = operation.NextOperationInstance == null;
+            var operationHistory = operation.History;
+            operation.NextOperationInstance = null;
+            operation.History = [];
+            await AppDbContext.SaveChangesAsync(cancellationToken);
+            
+            if(!isNextOperationInstanceNull)
+                operation.NextOperationInstance = operationHistory.Last();
+            
+            operation.History = operationHistory;
+            await AppDbContext.SaveChangesAsync(cancellationToken);
+            
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (Exception)
+        {
+            // ignored
+        }
+    }
 }

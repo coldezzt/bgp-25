@@ -148,6 +148,7 @@ public class OperationService(
             return operation;
         
         ProcessPastOperation(operationInstance, operationDto);
+        operation.NextOperationInstance = null;
         
         if (operation.Cron == null) 
             return operation;
@@ -164,17 +165,16 @@ public class OperationService(
         operation.Theme = operationDto.Theme;
         operation.Description = operationDto.Description;
         operation.Cron = operationDto.Cron.ToCronExpression(operationDto.StartDate);
-        
-        if (now > operationDto.StartDate)
-        {
-            ProcessPastOperation(operation.NextOperationInstance, operationDto);
-            if (operation.Cron != null)
-            {
-                ProcessCronOperationUpdate(operation);
-            }
-        }
-        
         operation.StartDate = operationDto.StartDate;
+
+        if (now <= operationDto.StartDate) 
+            return;
+        
+        ProcessPastOperation(operation.NextOperationInstance, operationDto);
+        if (operation.Cron != null)
+        {
+            ProcessCronOperationUpdate(operation);
+        }
     }
     
     private void ProcessPastOperation(OperationInstance operationInstance, CreateOperationDto operationDto)
@@ -184,8 +184,11 @@ public class OperationService(
         operationInstance.ExecutedAt = operationDto.StartDate;
     }
     
-    private void ProcessPastOperation(OperationInstance operationInstance, UpdateOperationDto operationDto)
+    private void ProcessPastOperation(OperationInstance? operationInstance, UpdateOperationDto operationDto)
     {
+        if (operationInstance == null)
+            return;
+        
         operationInstance.ScheduledAt = operationDto.StartDate;
         operationInstance.Result = "Done";
         operationInstance.ExecutedAt = operationDto.StartDate;
