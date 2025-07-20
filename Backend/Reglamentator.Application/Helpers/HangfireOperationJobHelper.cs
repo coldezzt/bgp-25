@@ -74,13 +74,13 @@ public class HangfireOperationJobHelper(
 
     private void ProcessPastOperation(OperationInstance operationInstance)
     {
-        operationInstance.ExecutedAt = DateTime.Now;
+        operationInstance.ExecutedAt = DateTime.UtcNow;
         operationInstance.Result = "Done";
     }
     
     private void ProcessCronOperationCreation(Operation operation)
     {
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
         operation.StartDate = GetNextOccurrence(operation);
 
         var newOperationInstance = new OperationInstance

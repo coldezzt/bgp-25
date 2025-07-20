@@ -14,7 +14,7 @@ public class HangfireReminderJobHelper(
 {
     public void CreateJobForReminder(Operation operation, Reminder reminder)
     {
-        if (GetReminderTime(operation, reminder) <= DateTime.Now)
+        if (GetReminderTime(operation, reminder) <= DateTime.UtcNow)
             return;
 
         recurringJobManager.AddOrUpdate(
@@ -25,7 +25,7 @@ public class HangfireReminderJobHelper(
 
     public void UpdateJobForReminder(Operation operation, Reminder reminder)
     {
-        if (GetReminderTime(operation, reminder) <= DateTime.Now)
+        if (GetReminderTime(operation, reminder) <= DateTime.UtcNow)
         {
             DeleteJobForReminder(reminder);
             return;

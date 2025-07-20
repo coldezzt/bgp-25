@@ -6,7 +6,7 @@ public static class TimeRangeExt
 {
     public static string? ToCronExpression(this TimeRange timeRange, DateTime? time = null)
     {
-        var effectiveTime = time ?? DateTime.Now;
+        var effectiveTime = time ?? DateTime.UtcNow;
 
         return timeRange switch
         {

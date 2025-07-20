@@ -22,7 +22,7 @@ public class OperationInstanceRepository(
         TimeRange range, 
         CancellationToken cancellationToken = default)
     {
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
         var (startDate, endDate) = range switch
         {
             TimeRange.Day => (now.Date, now.Date.AddDays(1).AddTicks(-1)),

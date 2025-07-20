@@ -127,7 +127,7 @@ public class OperationService(
 
     private Operation CreateNewOperation(long telegramId, CreateOperationDto operationDto)
     {
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
         var operationInstance = new OperationInstance
         {
             ScheduledAt = now,
@@ -160,7 +160,7 @@ public class OperationService(
     
     private void UpdateOperation(Operation operation, UpdateOperationDto operationDto)
     {
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
         
         operation.Theme = operationDto.Theme;
         operation.Description = operationDto.Description;
@@ -196,7 +196,7 @@ public class OperationService(
 
     private void ProcessCronOperationCreation(Operation operation)
     {
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
         operation.StartDate = GetNextOccurrence(operation);
 
         var newOperationInstance = new OperationInstance
@@ -212,7 +212,7 @@ public class OperationService(
     
     private void ProcessCronOperationUpdate(Operation operation)
     {
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
         operation.StartDate = GetNextOccurrence(operation);
 
         var newOperationInstance = new OperationInstance
