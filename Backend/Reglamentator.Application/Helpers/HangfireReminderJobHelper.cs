@@ -48,7 +48,7 @@ public class HangfireReminderJobHelper(
     
     private string GetReminderCron(Operation operation, Reminder reminder)
     {
-        var reminderTime = GetReminderTime(operation, reminder);
+        var reminderTime = GetReminderTime(operation, reminder).AddHours(3);
         return $"{reminderTime.Second} {reminderTime.Minute} {reminderTime.Hour} {reminderTime.Day} {reminderTime.Month} *";
     }
     
