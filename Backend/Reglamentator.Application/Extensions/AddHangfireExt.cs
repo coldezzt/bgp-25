@@ -16,6 +16,7 @@ public static class AddHangfireExt
                 options.UseNpgsqlConnection(configuration["Database:HangfireConnectionString"]);
             });
         });
+        services.AddHangfireServer();
         
         return services;
     }

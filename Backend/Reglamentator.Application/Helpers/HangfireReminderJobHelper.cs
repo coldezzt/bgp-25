@@ -20,8 +20,7 @@ public class HangfireReminderJobHelper(
         recurringJobManager.AddOrUpdate(
             GetReminderJobId(reminder.Id),
             () => ProcessReminderJob(reminder.Id),
-            GetReminderCron(operation, reminder),
-            new RecurringJobOptions{TimeZone = TimeZoneInfo.Local});
+            GetReminderCron(operation, reminder));
     }
 
     public void UpdateJobForReminder(Operation operation, Reminder reminder)
@@ -35,8 +34,7 @@ public class HangfireReminderJobHelper(
         recurringJobManager.AddOrUpdate(
             GetReminderJobId(reminder.Id),
             () => ProcessReminderJob(reminder.Id),
-            GetReminderCron(operation, reminder),
-            new RecurringJobOptions{TimeZone = TimeZoneInfo.Local});
+            GetReminderCron(operation, reminder));
     }
     
     public void DeleteJobForReminder(Reminder reminder)

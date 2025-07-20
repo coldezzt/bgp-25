@@ -21,8 +21,7 @@ public class HangfireOperationJobHelper(
         recurringJobManager.AddOrUpdate(
             GetOperationJobId(operation.Id),
             () => ProcessOperationJob(operation.Id),
-            GetOperationCron(operation),
-            new RecurringJobOptions{TimeZone = TimeZoneInfo.Local});
+            GetOperationCron(operation));
         
         if (operation.Reminders == null)
             return;
@@ -41,8 +40,7 @@ public class HangfireOperationJobHelper(
         recurringJobManager.AddOrUpdate(
             GetOperationJobId(operation.Id),
             () => ProcessOperationJob(operation.Id),
-            GetOperationCron(operation),
-            new RecurringJobOptions{TimeZone = TimeZoneInfo.Local});
+            GetOperationCron(operation));
         
         if (operation.Reminders == null)
             return;

@@ -171,6 +171,8 @@ public class OperationService(
             return;
         
         ProcessPastOperation(operation.NextOperationInstance, operationDto);
+        operation.NextOperationInstance = null;
+        
         if (operation.Cron != null)
         {
             ProcessCronOperationUpdate(operation);
@@ -229,7 +231,7 @@ public class OperationService(
     private DateTime GetNextOccurrence(Operation operation)
     {
         var cronExpression = CrontabSchedule.Parse(operation.Cron);
-        var nextOccurrence = cronExpression.GetNextOccurrence(operation.StartDate);
+        var nextOccurrence = cronExpression.GetNextOccurrence(DateTime.UtcNow);
         
         return nextOccurrence;
     }
