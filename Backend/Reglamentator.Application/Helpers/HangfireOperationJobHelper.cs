@@ -21,7 +21,8 @@ public class HangfireOperationJobHelper(
         recurringJobManager.AddOrUpdate(
             GetOperationJobId(operation.Id),
             () => ProcessOperationJob(operation.Id),
-            GetOperationCron(operation));
+            GetOperationCron(operation),
+            new RecurringJobOptions{TimeZone = TimeZoneInfo.Local});
         
         if (operation.Reminders == null)
             return;
@@ -40,7 +41,8 @@ public class HangfireOperationJobHelper(
         recurringJobManager.AddOrUpdate(
             GetOperationJobId(operation.Id),
             () => ProcessOperationJob(operation.Id),
-            GetOperationCron(operation));
+            GetOperationCron(operation),
+            new RecurringJobOptions{TimeZone = TimeZoneInfo.Local});
         
         if (operation.Reminders == null)
             return;
@@ -68,7 +70,7 @@ public class HangfireOperationJobHelper(
     
     private string GetOperationCron(Operation operation)
     {
-        var startDate = operation.StartDate.AddHours(3);
+        var startDate = operation.StartDate;
         return $"{startDate.Second} {startDate.Minute} {startDate.Hour} {startDate.Day} {startDate.Month} *";
     }
 

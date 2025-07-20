@@ -20,7 +20,8 @@ public class HangfireReminderJobHelper(
         recurringJobManager.AddOrUpdate(
             GetReminderJobId(reminder.Id),
             () => ProcessReminderJob(reminder.Id),
-            GetReminderCron(operation, reminder));
+            GetReminderCron(operation, reminder),
+            new RecurringJobOptions{TimeZone = TimeZoneInfo.Local});
     }
 
     public void UpdateJobForReminder(Operation operation, Reminder reminder)
@@ -34,7 +35,8 @@ public class HangfireReminderJobHelper(
         recurringJobManager.AddOrUpdate(
             GetReminderJobId(reminder.Id),
             () => ProcessReminderJob(reminder.Id),
-            GetReminderCron(operation, reminder));
+            GetReminderCron(operation, reminder),
+            new RecurringJobOptions{TimeZone = TimeZoneInfo.Local});
     }
     
     public void DeleteJobForReminder(Reminder reminder)
@@ -48,7 +50,7 @@ public class HangfireReminderJobHelper(
     
     private string GetReminderCron(Operation operation, Reminder reminder)
     {
-        var reminderTime = GetReminderTime(operation, reminder).AddHours(3);
+        var reminderTime = GetReminderTime(operation, reminder);
         return $"{reminderTime.Second} {reminderTime.Minute} {reminderTime.Hour} {reminderTime.Day} {reminderTime.Month} *";
     }
     
