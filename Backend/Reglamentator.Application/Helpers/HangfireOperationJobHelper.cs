@@ -60,7 +60,7 @@ public class HangfireOperationJobHelper(
     private string GetOperationCron(Operation operation)
     {
         var startDate = operation.StartDate;
-        return $"{startDate.Minute} {startDate.Hour} {startDate.Day} {startDate.Month} *";
+        return $"{startDate.Second} {startDate.Minute} {startDate.Hour} {startDate.Day} {startDate.Month} *";
     }
 
     private void ProcessPastOperation(OperationInstance operationInstance)
