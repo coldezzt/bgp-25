@@ -16,7 +16,8 @@ public class OperationEntityConfiguration: IEntityTypeConfiguration<Operation>
         
         builder.HasOne(o => o.TelegramUser)
             .WithMany(u => u.Operations)
-            .HasForeignKey(o => o.TelegramUserId);
+            .HasForeignKey(o => o.TelegramUserId)
+            .HasPrincipalKey(u => u.TelegramId);
 
         builder.HasOne(x => x.NextOperationInstance)
             .WithOne()

@@ -15,6 +15,7 @@ public class TelegramUserEntityConfiguration: IEntityTypeConfiguration<TelegramU
 
         builder.HasMany(u => u.Operations)
             .WithOne(o => o.TelegramUser)
-            .HasForeignKey(o => o.TelegramUserId);
+            .HasForeignKey(o => o.TelegramUserId)
+            .HasPrincipalKey(u => u.TelegramId);
     }
 }
