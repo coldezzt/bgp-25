@@ -16,4 +16,12 @@ public class OperationRepository(
             .Include(op => op.NextOperationInstance)
             .Include(op => op.Reminders)
             .SingleOrDefaultAsync(cancellationToken);
+
+    public async Task<Operation?> GetWithRemindersAsync(
+        Expression<Func<Operation, bool>> filter, 
+        CancellationToken cancellationToken = default) =>
+            await AppDbContext.Operations
+                .Where(filter)
+                .Include(op => op.Reminders)
+                .SingleOrDefaultAsync(cancellationToken);
 }

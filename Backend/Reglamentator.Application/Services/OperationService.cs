@@ -43,6 +43,23 @@ public class OperationService(
         return Result.Ok(history);
     }
 
+    public async Task<Result<Operation>> GetOperationAsync(long telegramId, long operationId, CancellationToken cancellationToken = default)
+    {
+        if (await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
+            return Result.Fail(new NotFoundError(NotFoundError.UserNotFound));
+        
+        var operation = await operationRepository.GetWithRemindersAsync(
+            op => op.Id == operationId, cancellationToken);
+        
+        if (operation == null)
+            return Result.Fail(new NotFoundError(NotFoundError.OperationNotFound));
+
+        if (operation.TelegramUserId != telegramId)
+            return Result.Fail(new PermissionError(PermissionError.UserNotAllowedToOperation));
+        
+        return Result.Ok(operation);
+    }
+
     public async Task<Result<Operation>> CreateOperationAsync(
         long telegramId, 
         CreateOperationDto operationDto, 

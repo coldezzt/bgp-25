@@ -11,6 +11,7 @@ package reglamentator;
 service Operation {
   rpc GetPlanedOperations (PlanedOperationsRequest) returns (PlanedOperationsResponse);
   rpc GetOperationHistory (OperationHistoryRequest) returns (OperationHistoryResponse);
+  rpc GetOperation (GetOperationRequest) returns (OperationResponse);
   rpc CreateOperation (CreateOperationRequest) returns (OperationResponse);
   rpc UpdateOperation (UpdateOperationRequest) returns (OperationResponse);
   rpc DeleteOperation (DeleteOperationRequest) returns (OperationResponse);
@@ -116,6 +117,11 @@ message PlanedOperationsRequest {
 
 message OperationHistoryRequest {
   int64 telegram_id = 1;
+}
+
+message GetOperationRequest {
+  int64 telegram_id = 1;
+  int64 operation_id = 2;
 }
 
 message CreateOperationRequest {

@@ -7,4 +7,6 @@ public interface IOperationRepository: IRepository<Operation>
 {
     Task<Operation?> GetWithDetailsForProcessJobAsync(Expression<Func<Operation, bool>> filter, 
         CancellationToken cancellationToken = default);
+    Task<Operation?> GetWithRemindersAsync(Expression<Func<Operation, bool>> filter, 
+        CancellationToken cancellationToken = default);
 }

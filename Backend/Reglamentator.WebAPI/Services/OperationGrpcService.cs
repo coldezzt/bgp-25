@@ -38,6 +38,20 @@ public class OperationGrpcService(
         };
     }
 
+    public override async Task<OperationResponse> GetOperation(GetOperationRequest request, ServerCallContext context)
+    {
+        var result = await operationService.GetOperationAsync(
+            request.TelegramId, 
+            request.OperationId,
+            context.CancellationToken);
+        
+        return new OperationResponse
+        {
+            Status = result.ToStatusResponse(),
+            Operation = result.ToResponseData<Domain.Entities.Operation, OperationDto>(mapper)
+        };
+    }
+
     public override async Task<OperationResponse> CreateOperation(CreateOperationRequest request, ServerCallContext context)
     {
         var result = await operationService.CreateOperationAsync(

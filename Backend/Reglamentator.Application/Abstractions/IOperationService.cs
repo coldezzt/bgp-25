@@ -10,6 +10,8 @@ public interface IOperationService
         CancellationToken cancellationToken = default);
     Task<Result<List<OperationInstance>>> GetOperationHistoryAsync(long telegramId,
         CancellationToken cancellationToken = default);
+    Task<Result<Operation>> GetOperationAsync(long telegramId, long operationId,
+        CancellationToken cancellationToken = default);
     Task<Result<Operation>> CreateOperationAsync(long telegramId, CreateOperationDto operationDto,
         CancellationToken cancellationToken = default);
     Task<Result<Operation>> UpdateOperationAsync(long telegramId, UpdateOperationDto operationDto,
