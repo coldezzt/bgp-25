@@ -37,12 +37,14 @@ public class OperationRepository(
             var operationHistory = operation.History;
             operation.NextOperationInstance = null;
             operation.History = [];
+            await AppDbContext.Operations.AddAsync(operation, cancellationToken);
             await AppDbContext.SaveChangesAsync(cancellationToken);
             
             if(!isNextOperationInstanceNull)
                 operation.NextOperationInstance = operationHistory.Last();
             
             operation.History = operationHistory;
+            AppDbContext.Update(operation);
             await AppDbContext.SaveChangesAsync(cancellationToken);
             
             await transaction.CommitAsync(cancellationToken);
