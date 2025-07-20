@@ -22,7 +22,10 @@ public class HangfireOperationJobHelper(
             GetOperationJobId(operation.Id),
             () => ProcessOperationJob(operation.Id),
             GetOperationCron(operation));
-            
+        
+        if (operation.Reminders == null)
+            return;
+        
         foreach (var reminder in operation.Reminders)
         {
             hangfireReminderJobHelper.CreateJobForReminder(operation, reminder);
@@ -39,6 +42,9 @@ public class HangfireOperationJobHelper(
             () => ProcessOperationJob(operation.Id),
             GetOperationCron(operation));
         
+        if (operation.Reminders == null)
+            return;
+        
         foreach (var reminder in operation.Reminders)
         {
             hangfireReminderJobHelper.UpdateJobForReminder(operation, reminder);
@@ -48,6 +54,9 @@ public class HangfireOperationJobHelper(
     public void DeleteJobsForOperation(Operation operation)
     {
         recurringJobManager.RemoveIfExists(GetOperationJobId(operation.Id));
+        
+        if (operation.Reminders == null)
+            return;
         
         foreach (var reminder in operation.Reminders)
         {
@@ -65,13 +74,13 @@ public class HangfireOperationJobHelper(
 
     private void ProcessPastOperation(OperationInstance operationInstance)
     {
-        operationInstance.ExecutedAt = DateTime.UtcNow;
+        operationInstance.ExecutedAt = DateTime.Now;
         operationInstance.Result = "Done";
     }
     
     private void ProcessCronOperationCreation(Operation operation)
     {
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         operation.StartDate = GetNextOccurrence(operation);
 
         var newOperationInstance = new OperationInstance
