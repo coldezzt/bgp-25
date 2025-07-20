@@ -173,10 +173,10 @@ public class OperationService(
         ProcessPastOperation(operation.NextOperationInstance, operationDto);
         operation.NextOperationInstance = null;
         
-        if (operation.Cron != null)
-        {
-            ProcessCronOperationUpdate(operation);
-        }
+        if(operation.Cron == null)
+            return;
+
+        ProcessCronOperationUpdate(operation);
     }
     
     private void ProcessPastOperation(OperationInstance operationInstance, CreateOperationDto operationDto)
