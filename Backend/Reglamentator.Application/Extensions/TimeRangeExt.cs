@@ -57,7 +57,7 @@ public static class TimeRangeExt
         };
 
     public static TimeRange ToTimeRange(this TimeSpan timeSpan) =>
-        (timeSpan.TotalMinutes, timeSpan.TotalHours, timeSpan.TotalDays) switch
+        (timeSpan.Minutes, timeSpan.Hours, timeSpan.Days) switch
         {
             (0, 0, 0) => TimeRange.None,
             (<= 15, 0, 0) => TimeRange.Min15,
