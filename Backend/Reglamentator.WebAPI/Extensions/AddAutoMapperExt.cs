@@ -1,4 +1,4 @@
-using Reglamentator.WebAPI.Mapping.Profiles;
+using System.Reflection;
 
 namespace Reglamentator.WebAPI.Extensions;
 
@@ -6,14 +6,7 @@ public static class AddAutoMapperExt
 {
     public static IServiceCollection AddAutoMapperWithConfigure(this IServiceCollection services)
     {
-        services.AddAutoMapper(cfg =>
-        {
-            cfg.AddProfile<TelegramUserMappingProfile>();
-            cfg.AddProfile<ReminderMappingProfile>();
-            cfg.AddProfile<OperationMappingProfile>();
-            cfg.AddProfile<OperationInstanceMappingProfile>();
-            cfg.AddProfile<TimeRangeMappingProfile>();
-        });
+        services.AddAutoMapper(_ => {}, Assembly.GetExecutingAssembly());
         
         return services;
     }
