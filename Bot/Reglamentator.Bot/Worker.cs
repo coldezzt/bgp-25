@@ -1,24 +1,20 @@
 namespace Reglamentator.Bot;
 
+using Telegram.Bot;
+using Reglamentator.WebAPI;
+
 public class Worker : BackgroundService
 {
-    private readonly ILogger<Worker> _logger;
+    private readonly TelegramBotService _botService;
 
-    public Worker(ILogger<Worker> logger)
+    public Worker(ITelegramBotClient botClient, Operation.OperationClient grpcClient)
     {
-        _logger = logger;
+        _botService = new TelegramBotService(botClient, grpcClient);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            if (_logger.IsEnabled(LogLevel.Information))
-            {
-                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-            }
-
-            await Task.Delay(1000, stoppingToken);
-        }
+        await _botService.StartAsync(stoppingToken);
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 }
