@@ -23,7 +23,10 @@ public class NotificationGrpcService(
                 await Task.Delay(TimeSpan.FromMinutes(15), context.CancellationToken);
             }
         }
-        catch (TaskCanceledException) { }
+        catch (TaskCanceledException)
+        {
+            //ignored
+        }
         finally
         {
             notificationStreamManager.RemoveConsumer(id);
