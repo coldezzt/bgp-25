@@ -231,6 +231,7 @@ public class ReminderServiceTests
             .Build<Reminder>()
             .With(r => r.Id, reminderDto.Id)
             .With(r => r.Operation, operation)
+            .With(r => r.OperationId, operationId)
             .Create();
         operation.Reminders.Add(reminder);
         _telegramUserRepositoryMock
@@ -260,6 +261,7 @@ public class ReminderServiceTests
         _hangfireReminderJobHelperMock.Verify(helper => 
                 helper.UpdateJobForReminder(It.IsAny<Operation>(), It.IsAny<Reminder>()),
             Times.Once);
+        Assert.True(result.IsSuccess);
         Assert.Equal(operationId, result.ValueOrDefault?.OperationId);
     }
     
@@ -578,6 +580,7 @@ public class ReminderServiceTests
             .Build<Reminder>()
             .With(r => r.Id, reminderId)
             .With(r => r.Operation, operation)
+            .With(r => r.OperationId, operationId)
             .Create();
         operation.Reminders.Add(reminder);
         _telegramUserRepositoryMock
@@ -607,6 +610,7 @@ public class ReminderServiceTests
         _hangfireReminderJobHelperMock.Verify(helper => 
                 helper.DeleteJobForReminder(It.IsAny<Reminder>()),
             Times.Once);
+        Assert.True(result.IsSuccess);
         Assert.Equal(operationId, result.ValueOrDefault?.OperationId);
     }
     

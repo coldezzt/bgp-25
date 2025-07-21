@@ -1,6 +1,7 @@
 using AutoFixture;
 using Moq;
 using Reglamentator.Application.Abstractions;
+using Reglamentator.Application.Dtos;
 using Reglamentator.Application.Services;
 using Reglamentator.Domain.Entities;
 using Reglamentator.Domain.Interfaces;
@@ -269,5 +270,517 @@ public class OperationServiceTests
         
         Assert.True(result.IsSuccess);
         Assert.Equal(operation.Id, result.ValueOrDefault.Id);
+    }
+
+    [Fact]
+    public async Task Creating_Operation_With_Valid_User_And_Start_Date_Saves_It_And_Launch_Scheduling()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationDto = _fixture
+            .Build<CreateOperationDto>()
+            .With(o => o.StartDate, DateTime.Now.AddDays(1))
+            .Create();
+        var telegram = _fixture
+            .Build<TelegramUser>()
+            .With(u => u.TelegramId, telegramId)
+            .With(u => u.Operations, new List<Operation>())
+            .Create();
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(true);
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.GetEntityByFilterAsync(u => u.TelegramId == telegramId,_cancellationToken))
+            .ReturnsAsync(telegram);
+        
+        var result = await _operationService.CreateOperationAsync(telegramId, operationDto, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.InsertEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Once);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.CreateJobsForOperation(It.IsAny<Operation>()),
+            Times.Once);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(telegramId, result.ValueOrDefault.TelegramUserId);
+    }
+    
+    [Fact]
+    public async Task? Creating_Operation_With_Valid_User_And_Invalid_Start_Date_Is_Fail()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationDto = _fixture
+            .Build<CreateOperationDto>()
+            .With(o => o.StartDate, DateTime.Now.AddDays(-1))
+            .Create();
+        var telegram = _fixture
+            .Build<TelegramUser>()
+            .With(u => u.TelegramId, telegramId)
+            .With(u => u.Operations, new List<Operation>())
+            .Create();
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(true);
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.GetEntityByFilterAsync(u => u.TelegramId == telegramId,_cancellationToken))
+            .ReturnsAsync(telegram);
+        
+        var result = await _operationService.CreateOperationAsync(telegramId, operationDto, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.InsertEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Never);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.CreateJobsForOperation(It.IsAny<Operation>()),
+            Times.Never);
+        Assert.True(result.IsFailed);
+    }
+    
+    [Fact]
+    public async Task? Creating_Operation_With_Invalid_User_Is_Fail()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationDto = _fixture
+            .Build<CreateOperationDto>()
+            .With(o => o.StartDate, DateTime.Now.AddDays(-1))
+            .Create();
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(false);
+        
+        var result = await _operationService.CreateOperationAsync(telegramId, operationDto, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.InsertEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Never);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.CreateJobsForOperation(It.IsAny<Operation>()),
+            Times.Never);
+        Assert.True(result.IsFailed);
+    }
+    
+    [Fact]
+    public async Task Updating_Existing_Operation_With_Valid_User_And_Start_Date_Save_Changes_And_Relaunch_Scheduling()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationId = _fixture.Create<long>();
+        var operationDto = _fixture
+            .Build<UpdateOperationDto>()
+            .With(o => o.Id, operationId)
+            .With(o => o.StartDate, DateTime.Now.AddDays(1))
+            .Create();
+        var telegram = _fixture
+            .Build<TelegramUser>()
+            .With(u => u.TelegramId, telegramId)
+            .With(u => u.Operations, new List<Operation>())
+            .Create();
+        var operation = _fixture
+            .Build<Operation>()
+            .With(o => o.Id, operationId)
+            .With(o => o.TelegramUserId, telegramId)
+            .With(o => o.TelegramUser, telegram)
+            .With(o => o.Reminders, new List<Reminder>())
+            .With(o => o.NextOperationInstance, new OperationInstance())
+            .With(o => o.History, new List<OperationInstance>())
+            .Create();
+        telegram.Operations.Add(operation);
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(true);
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.GetEntityByFilterAsync(u => u.TelegramId == telegramId,_cancellationToken))
+            .ReturnsAsync(telegram);
+        _operationRepositoryMock
+            .Setup(repo => repo.IsExistAsync(operationId, _cancellationToken))
+            .ReturnsAsync(true);
+        _operationRepositoryMock
+            .Setup(repo => repo.GetWithDetailsForProcessJobAsync(o => o.Id == operationDto.Id, _cancellationToken))
+            .ReturnsAsync(operation);
+        
+        var result = await _operationService.UpdateOperationAsync(telegramId, operationDto, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.UpdateEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Once);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.UpdateJobsForOperation(It.IsAny<Operation>()),
+            Times.Once);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(telegramId, result.ValueOrDefault.TelegramUserId);
+    }
+    
+    [Fact]
+    public async Task Updating_Existing_Operation_With_Valid_User_And_Invalid_Start_Date_Is_Fail()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationId = _fixture.Create<long>();
+        var operationDto = _fixture
+            .Build<UpdateOperationDto>()
+            .With(o => o.Id, operationId)
+            .With(o => o.StartDate, DateTime.Now.AddDays(-1))
+            .Create();
+        var telegram = _fixture
+            .Build<TelegramUser>()
+            .With(u => u.TelegramId, telegramId)
+            .With(u => u.Operations, new List<Operation>())
+            .Create();
+        var operation = _fixture
+            .Build<Operation>()
+            .With(o => o.Id, operationId)
+            .With(o => o.TelegramUserId, telegramId)
+            .With(o => o.TelegramUser, telegram)
+            .With(o => o.Reminders, new List<Reminder>())
+            .With(o => o.NextOperationInstance, new OperationInstance())
+            .With(o => o.History, new List<OperationInstance>())
+            .Create();
+        telegram.Operations.Add(operation);
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(true);
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.GetEntityByFilterAsync(u => u.TelegramId == telegramId,_cancellationToken))
+            .ReturnsAsync(telegram);
+        _operationRepositoryMock
+            .Setup(repo => repo.IsExistAsync(operationId, _cancellationToken))
+            .ReturnsAsync(true);
+        _operationRepositoryMock
+            .Setup(repo => repo.GetWithDetailsForProcessJobAsync(o => o.Id == operationDto.Id, _cancellationToken))
+            .ReturnsAsync(operation);
+        
+        var result = await _operationService.UpdateOperationAsync(telegramId, operationDto, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.UpdateEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Never);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.UpdateJobsForOperation(It.IsAny<Operation>()),
+            Times.Never);
+        Assert.True(result.IsFailed);
+    }
+    
+    [Fact]
+    public async Task Updating_Existing_Operation_With_Invalid_User_Is_Fail()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationId = _fixture.Create<long>();
+        var operationDto = _fixture
+            .Build<UpdateOperationDto>()
+            .With(o => o.Id, operationId)
+            .With(o => o.StartDate, DateTime.Now.AddDays(1))
+            .Create();
+        var operation = _fixture
+            .Build<Operation>()
+            .With(o => o.Id, operationId)
+            .With(o => o.TelegramUserId, telegramId+1)
+            .With(o => o.TelegramUser, new TelegramUser{TelegramId = telegramId+1})
+            .With(o => o.Reminders, new List<Reminder>())
+            .With(o => o.NextOperationInstance, new OperationInstance())
+            .With(o => o.History, new List<OperationInstance>())
+            .Create();
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(false);
+        _operationRepositoryMock
+            .Setup(repo => repo.IsExistAsync(operationId, _cancellationToken))
+            .ReturnsAsync(true);
+        _operationRepositoryMock
+            .Setup(repo => repo.GetWithDetailsForProcessJobAsync(o => o.Id == operationDto.Id, _cancellationToken))
+            .ReturnsAsync(operation);
+        
+        var result = await _operationService.UpdateOperationAsync(telegramId, operationDto, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.UpdateEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Never);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.UpdateJobsForOperation(It.IsAny<Operation>()),
+            Times.Never);
+        Assert.True(result.IsFailed);
+    }
+    
+    [Fact]
+    public async Task Updating_Not_Existing_Operation_With_Valid_User_Is_Fail()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationId = _fixture.Create<long>();
+        var operationDto = _fixture
+            .Build<UpdateOperationDto>()
+            .With(o => o.StartDate, DateTime.Now.AddDays(1))
+            .Create();
+        var telegram = _fixture
+            .Build<TelegramUser>()
+            .With(u => u.TelegramId, telegramId)
+            .With(u => u.Operations, new List<Operation>())
+            .Create();
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(true);
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.GetEntityByFilterAsync(u => u.TelegramId == telegramId,_cancellationToken))
+            .ReturnsAsync(telegram);
+        _operationRepositoryMock
+            .Setup(repo => repo.IsExistAsync(operationId, _cancellationToken))
+            .ReturnsAsync(false);
+        
+        var result = await _operationService.UpdateOperationAsync(telegramId, operationDto, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.UpdateEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Never);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.UpdateJobsForOperation(It.IsAny<Operation>()),
+            Times.Never);
+        Assert.True(result.IsFailed);
+    }
+    
+    [Fact]
+    public async Task Updating_Not_Existing_Operation_With_Invalid_User_Is_Fail()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationId = _fixture.Create<long>();
+        var operationDto = _fixture
+            .Build<UpdateOperationDto>()
+            .With(o => o.StartDate, DateTime.Now.AddDays(1))
+            .Create();
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(false);
+        _operationRepositoryMock
+            .Setup(repo => repo.IsExistAsync(operationId, _cancellationToken))
+            .ReturnsAsync(false);
+        
+        var result = await _operationService.UpdateOperationAsync(telegramId, operationDto, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.UpdateEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Never);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.UpdateJobsForOperation(It.IsAny<Operation>()),
+            Times.Never);
+        Assert.True(result.IsFailed);
+    }
+    
+    [Fact]
+    public async Task Updating_Existing_Operation_That_Does_Not_Belong_To_User_Is_Fail()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationId = _fixture.Create<long>();
+        var operationDto = _fixture
+            .Build<UpdateOperationDto>()
+            .With(o => o.Id, operationId)
+            .With(o => o.StartDate, DateTime.Now.AddDays(1))
+            .Create();
+        var telegram = _fixture
+            .Build<TelegramUser>()
+            .With(u => u.TelegramId, telegramId)
+            .With(u => u.Operations, new List<Operation>())
+            .Create();
+        var operation = _fixture
+            .Build<Operation>()
+            .With(o => o.Id, operationId)
+            .With(o => o.TelegramUserId, telegramId + 1)
+            .With(o => o.TelegramUser, new TelegramUser{ TelegramId = telegramId +1})
+            .With(o => o.Reminders, new List<Reminder>())
+            .With(o => o.NextOperationInstance, new OperationInstance())
+            .With(o => o.History, new List<OperationInstance>())
+            .Create();
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(true);
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.GetEntityByFilterAsync(u => u.TelegramId == telegramId,_cancellationToken))
+            .ReturnsAsync(telegram);
+        _operationRepositoryMock
+            .Setup(repo => repo.IsExistAsync(operationId, _cancellationToken))
+            .ReturnsAsync(true);
+        _operationRepositoryMock
+            .Setup(repo => repo.GetWithDetailsForProcessJobAsync(o => o.Id == operationDto.Id, _cancellationToken))
+            .ReturnsAsync(operation);
+        
+        var result = await _operationService.UpdateOperationAsync(telegramId, operationDto, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.UpdateEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Never);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.UpdateJobsForOperation(It.IsAny<Operation>()),
+            Times.Never);
+        Assert.True(result.IsFailed);
+    }
+    
+    [Fact]
+    public async Task Deleting_Existing_Operation_With_Valid_User_Remove_It_And_Stop_Scheduling()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationId = _fixture.Create<long>();
+        var telegram = _fixture
+            .Build<TelegramUser>()
+            .With(u => u.TelegramId, telegramId)
+            .With(u => u.Operations, new List<Operation>())
+            .Create();
+        var operation = _fixture
+            .Build<Operation>()
+            .With(o => o.Id, operationId)
+            .With(o => o.TelegramUserId, telegramId)
+            .With(o => o.TelegramUser, telegram)
+            .With(o => o.Reminders, new List<Reminder>())
+            .With(o => o.NextOperationInstance, new OperationInstance())
+            .With(o => o.History, new List<OperationInstance>())
+            .Create();
+        telegram.Operations.Add(operation);
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(true);
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.GetEntityByFilterAsync(u => u.TelegramId == telegramId,_cancellationToken))
+            .ReturnsAsync(telegram);
+        _operationRepositoryMock
+            .Setup(repo => repo.IsExistAsync(operationId, _cancellationToken))
+            .ReturnsAsync(true);
+        _operationRepositoryMock
+            .Setup(repo => repo.GetEntityByFilterAsync(o => o.Id == operationId, _cancellationToken))
+            .ReturnsAsync(operation);
+        
+        var result = await _operationService.DeleteOperationAsync(telegramId, operationId, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.DeleteEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Once);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.DeleteJobsForOperation(It.IsAny<Operation>()),
+            Times.Once);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(telegramId, result.ValueOrDefault.TelegramUserId);
+    }
+    
+    [Fact]
+    public async Task Deleting_Existing_Operation_With_Invalid_User_Is_Fail()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationId = _fixture.Create<long>();
+        var operation = _fixture
+            .Build<Operation>()
+            .With(o => o.Id, operationId)
+            .With(o => o.TelegramUserId, telegramId+1)
+            .With(o => o.TelegramUser, new TelegramUser{TelegramId = telegramId+1})
+            .With(o => o.Reminders, new List<Reminder>())
+            .With(o => o.NextOperationInstance, new OperationInstance())
+            .With(o => o.History, new List<OperationInstance>())
+            .Create();
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(false);
+        _operationRepositoryMock
+            .Setup(repo => repo.IsExistAsync(operationId, _cancellationToken))
+            .ReturnsAsync(true);
+        _operationRepositoryMock
+            .Setup(repo => repo.GetEntityByFilterAsync(o => o.Id == operationId, _cancellationToken))
+            .ReturnsAsync(operation);
+        
+        var result = await _operationService.DeleteOperationAsync(telegramId, operationId, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.DeleteEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Never);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.DeleteJobsForOperation(It.IsAny<Operation>()),
+            Times.Never);
+        Assert.True(result.IsFailed);
+    }
+    
+    [Fact]
+    public async Task Deleting_Not_Existing_Operation_With_Valid_User_Is_Fail()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationId = _fixture.Create<long>();
+        var telegram = _fixture
+            .Build<TelegramUser>()
+            .With(u => u.TelegramId, telegramId)
+            .With(u => u.Operations, new List<Operation>())
+            .Create();
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(true);
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.GetEntityByFilterAsync(u => u.TelegramId == telegramId,_cancellationToken))
+            .ReturnsAsync(telegram);
+        _operationRepositoryMock
+            .Setup(repo => repo.IsExistAsync(operationId, _cancellationToken))
+            .ReturnsAsync(false);
+        
+        var result = await _operationService.DeleteOperationAsync(telegramId, operationId, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.DeleteEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Never);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.DeleteJobsForOperation(It.IsAny<Operation>()),
+            Times.Never);
+        Assert.True(result.IsFailed);
+    }
+    
+    [Fact]
+    public async Task Deleting_Not_Existing_Operation_With_Invalid_User_Is_Fail()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationId = _fixture.Create<long>();
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(false);
+        _operationRepositoryMock
+            .Setup(repo => repo.IsExistAsync(operationId, _cancellationToken))
+            .ReturnsAsync(false);
+        
+        var result = await _operationService.DeleteOperationAsync(telegramId, operationId, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.DeleteEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Never);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.DeleteJobsForOperation(It.IsAny<Operation>()),
+            Times.Never);
+        Assert.True(result.IsFailed);
+    }
+    
+    [Fact]
+    public async Task Deleting_Existing_Operation_That_Does_Not_Belong_To_User_Is_Fail()
+    {
+        var telegramId = _fixture.Create<long>();
+        var operationId = _fixture.Create<long>();
+        var telegram = _fixture
+            .Build<TelegramUser>()
+            .With(u => u.TelegramId, telegramId)
+            .With(u => u.Operations, new List<Operation>())
+            .Create();
+        var operation = _fixture
+            .Build<Operation>()
+            .With(o => o.TelegramUserId, telegramId + 1)
+            .With(o => o.Id, operationId)
+            .With(o => o.TelegramUser, new TelegramUser{ TelegramId = telegramId +1})
+            .With(o => o.Reminders, new List<Reminder>())
+            .With(o => o.NextOperationInstance, new OperationInstance())
+            .With(o => o.History, new List<OperationInstance>())
+            .Create();
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.IsExistAsync(telegramId,_cancellationToken))
+            .ReturnsAsync(true);
+        _telegramUserRepositoryMock
+            .Setup(repo => repo.GetEntityByFilterAsync(u => u.TelegramId == telegramId,_cancellationToken))
+            .ReturnsAsync(telegram);
+        _operationRepositoryMock
+            .Setup(repo => repo.IsExistAsync(operation.Id, _cancellationToken))
+            .ReturnsAsync(true);
+        _operationRepositoryMock
+            .Setup(repo => repo.GetEntityByFilterAsync(o => o.Id == operation.Id, _cancellationToken))
+            .ReturnsAsync(operation);
+        
+        var result = await _operationService.DeleteOperationAsync(telegramId, operationId, _cancellationToken);
+        
+        _operationRepositoryMock.Verify(repo => 
+                repo.DeleteEntityAsync(It.IsAny<Operation>(), _cancellationToken), 
+            Times.Never);
+        _hangfireOperationJobHelperMock.Verify(helper => 
+                helper.DeleteJobsForOperation(It.IsAny<Operation>()),
+            Times.Never);
+        Assert.True(result.IsFailed);
     }
 }
