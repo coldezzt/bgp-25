@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Telegram.Bot;
-using Reglamentator.WebAPI;
+using Reglamentator.Bot;
 using Grpc.Core;
 
 namespace Reglamentator.Bot.Workers;
