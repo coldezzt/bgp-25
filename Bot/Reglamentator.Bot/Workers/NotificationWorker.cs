@@ -3,12 +3,12 @@ using Telegram.Bot;
 using Reglamentator.WebAPI;
 using Grpc.Core;
 
-namespace Reglamentator.Bot.Services;
+namespace Reglamentator.Bot.Workers;
 
 public class NotificationWorker : BackgroundService
 {
     private readonly Notification.NotificationClient _notificationClient;
-    private readonly ITelegramBotClient _botClient; // Используйте TelegramBotClient
+    private readonly ITelegramBotClient _botClient;
 
     public NotificationWorker(Notification.NotificationClient notificationClient, ITelegramBotClient botClient)
     {

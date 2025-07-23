@@ -3,7 +3,7 @@ syntax = "proto3";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 
-option csharp_namespace = "Reglamentator.WebAPI";
+option csharp_namespace = "Reglamentator.Bot";
 
 package reglamentator;
 

@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using Reglamentator.WebAPI;
 using Google.Protobuf.WellKnownTypes;
 
 namespace Reglamentator.Bot.Services;
@@ -49,16 +48,17 @@ public class DialogService
         if (!_userDialogs.TryGetValue(chatId, out var state))
             return false;
 
+
         switch (state.Step)
         {
             case DialogStep.AskTheme:
-                state.Theme = message.Text;
+                state.Theme = message.Text ?? "";
                 state.Step = DialogStep.AskDescription;
                 await _botClient.SendMessage(chatId, "Введите описание задачи:", cancellationToken: ct);
                 break;
 
             case DialogStep.AskDescription:
-                state.Description = message.Text;
+                state.Description = message.Text ?? "";
                 state.Step = DialogStep.AskDate;
                 await _botClient.SendMessage(chatId, "Введите дату (гггг-мм-дд):", cancellationToken: ct);
                 break;
@@ -109,8 +109,8 @@ public class DialogService
     private class DialogState
     {
         public DialogStep Step { get; set; }
-        public string Theme { get; set; }
-        public string Description { get; set; }
+        public string? Theme { get; set; }
+        public string? Description { get; set; }
         public DateTime Date { get; set; }
     }
 

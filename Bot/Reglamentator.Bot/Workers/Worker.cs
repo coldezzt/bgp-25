@@ -1,8 +1,6 @@
-namespace Reglamentator.Bot;
-
 using Telegram.Bot;
-using Reglamentator.WebAPI;
 
+namespace Reglamentator.Bot.Workers;
 public class Worker : BackgroundService
 {
     private readonly TelegramBotService _botService;

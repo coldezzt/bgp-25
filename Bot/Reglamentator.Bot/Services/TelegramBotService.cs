@@ -3,7 +3,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using Reglamentator.WebAPI;
+using Reglamentator.Bot;
 using Grpc.Net.Client;
 using Reglamentator.Bot.Services;
 
@@ -59,11 +59,9 @@ public class TelegramBotService
         var chatId = message.Chat.Id;
         var text = message.Text ?? "";
 
-        // Сбросить диалог, если пользователь начал новую команду или нажал кнопку не из диалога
         if (text.StartsWith("/") || IsMainMenuButton(text))
             _dialogService.CancelDialog(chatId);
 
-        // Обработка ручной отмены диалога
         if (text.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
         {
             _dialogService.CancelDialog(chatId);
@@ -74,7 +72,7 @@ public class TelegramBotService
         if (_dialogService.HasActiveDialog(chatId))
         {
             if (await _dialogService.HandleDialogMessage(message, ct))
-                return; // Если это был шаг диалога — не обрабатываем как обычную команду
+                return;
         }
 
         if (text.StartsWith("/"))
@@ -142,7 +140,6 @@ public class TelegramBotService
         await SendMessage(chatId, "Неизвестная команда. Используйте /start", null, ct);
     }
 
-    // Проверка, является ли текст кнопкой главного меню
     private bool IsMainMenuButton(string text)
     {
         return text == "📋 Список задач" || text == "➕ Добавить" || text == "📅 Сегодня" ||
