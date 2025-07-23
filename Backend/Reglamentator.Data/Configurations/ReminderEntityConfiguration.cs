@@ -10,8 +10,12 @@ public class ReminderEntityConfiguration: IEntityTypeConfiguration<Reminder>
     {
         builder.HasKey(r => r.Id);
         
-        builder.Property(r => r.MessageTemplate).IsRequired();
-        builder.Property(r => r.OffsetBeforeExecution).IsRequired();
+        builder.Property(r => r.MessageTemplate)
+            .IsRequired()
+            .HasMaxLength(1000);
+        
+        builder.Property(r => r.OffsetBeforeExecution)
+            .IsRequired();
         
         builder.HasOne(r => r.Operation)
             .WithMany(o => o.Reminders)

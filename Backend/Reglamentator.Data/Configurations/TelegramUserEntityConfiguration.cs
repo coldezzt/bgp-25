@@ -10,12 +10,16 @@ public class TelegramUserEntityConfiguration: IEntityTypeConfiguration<TelegramU
     {
         builder.HasKey(u => u.Id);
 
+        builder.Property(u => u.TelegramId)
+            .IsRequired();
+        
         builder.HasIndex(u => u.TelegramId)
             .IsUnique();
 
         builder.HasMany(u => u.Operations)
             .WithOne(o => o.TelegramUser)
             .HasForeignKey(o => o.TelegramUserId)
-            .HasPrincipalKey(u => u.TelegramId);
+            .HasPrincipalKey(u => u.TelegramId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

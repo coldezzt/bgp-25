@@ -10,10 +10,15 @@ public class OperationInstanceEntityConfiguration: IEntityTypeConfiguration<Oper
     {
         builder.HasKey(oi => oi.Id);
         
-        builder.Property(oi => oi.ScheduledAt).IsRequired();
+        builder.Property(oi => oi.ScheduledAt)
+            .IsRequired();
+        
+        builder.Property(oi => oi.Result)
+            .HasMaxLength(200);
         
         builder.HasOne(oi => oi.Operation)
             .WithMany(o => o.History)
-            .HasForeignKey(oi => oi.OperationId);
+            .HasForeignKey(oi => oi.OperationId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
