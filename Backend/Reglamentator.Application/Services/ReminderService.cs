@@ -21,7 +21,7 @@ public class ReminderService(
         CreateReminderDto reminderDto,
         CancellationToken cancellationToken = default)
     {
-        if (await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
+        if (!await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
             return Result.Fail(new NotFoundError(NotFoundError.UserNotFound));
         
         var operation = await operationRepository.GetEntityByFilterAsync(
@@ -47,7 +47,7 @@ public class ReminderService(
         UpdateReminderDto reminderDto,
         CancellationToken cancellationToken = default)
     {
-        if (await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
+        if (!await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
             return Result.Fail(new NotFoundError(NotFoundError.UserNotFound));
         
         var operation = await operationRepository.GetEntityByFilterAsync(
@@ -79,7 +79,7 @@ public class ReminderService(
         long reminderId,
         CancellationToken cancellationToken = default)
     {
-        if (await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
+        if (!await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
             return Result.Fail(new NotFoundError(NotFoundError.UserNotFound));
         
         var operation = await operationRepository.GetEntityByFilterAsync(
