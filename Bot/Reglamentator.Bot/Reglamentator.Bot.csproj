@@ -1,13 +1,31 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <UserSecretsId>dotnet-Reglamentator.Bot-f00dadfc-bf84-4343-ba00-135679a50f0a</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.5"/>
+        <PackageReference Include="Google.Protobuf" Version="3.31.1" />
+        <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
+        <PackageReference Include="Grpc.Tools" Version="2.72.0">
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+          <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.5" />
+        <PackageReference Include="Telegram.Bot" Version="22.6.0" />
+        
+    </ItemGroup>
+    
+<ItemGroup>
+	<Protobuf Include="Protos\reglamentator.proto" GrpcServices="Client" />
+</ItemGroup>
+
+
+    <ItemGroup>
+        <None Update="Resources\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 </Project>

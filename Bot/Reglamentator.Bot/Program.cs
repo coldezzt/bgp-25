@@ -1,7 +1,21 @@
-using Reglamentator.Bot;
+using Reglamentator.Bot.Extensions;
 
 var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddHostedService<Worker>();
+builder.Configuration.AddEnvironmentVariables();
+var token = builder.Configuration.GetRequiredValue("TelegramBot:Token");
+var grpcUrl = builder.Configuration.GetRequiredValue("Grpc:BackendUrl");
 
-var host = builder.Build();
-host.Run();
+try
+{
+    builder.Services
+        .AddGrpcClients(grpcUrl)
+        .AddTelegramBotClient(token)
+        .AddAppWorkers();
+
+    var host = builder.Build();
+    await host.RunAsync();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Failed to initialize services: {ex.Message}");
+}
