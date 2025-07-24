@@ -127,7 +127,7 @@ jobs:
             docker run -d \
               --name reglamentator-bot \
               -e TelegramBot__Token="${{ secrets.TELEGRAMBOT__TOKEN }}" \
-              -e Grpc__BackendUrl="${{ secrets.GRPC_BACKENDURL }}" \
+              -e Grpc__BackendUrl="${{ secrets.GRPC__BACKENDURL }}" \
               -v /app/bot:/app \
               -w /app \
               mcr.microsoft.com/dotnet/aspnet:8.0 \
