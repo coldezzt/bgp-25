@@ -110,10 +110,10 @@ public class TelegramBotService
             case "/list":
                 await HandleListCommand(chatId, ct);
                 return true;
-            case "/operation-add":
+            case "/operation_add":
                 await _dialogService.StartAddDialog(chatId, ct);
                 return true;
-            case "/operation-delete":
+            case "/operation_delete":
                 await HandleDeleteCommand(chatId, text, ct);
                 return true;
             case "/today":
@@ -125,20 +125,23 @@ public class TelegramBotService
             case "/month":
                 await HandleFilteredListCommand(chatId, "month", ct);
                 return true;
-            case "/operation-edit":
+            case "/operation_edit":
                 await _dialogService.StartEditDialog(chatId, ct);
                 return true;
             case "/history":
                 await HandleHistoryCommand(chatId, ct);
                 return true;
-            case "/reminder-add":
+            case "/reminder_add":
                 await _dialogService.StartAddReminderDialog(chatId, ct);
                 return true;
-            case "/reminder-delete":
+            case "/reminder_delete":
                 await _dialogService.StartDeleteReminderDialog(chatId, ct);
                 return true;
-            case "/reminder-update":
+            case "/reminder_update":
                 await _dialogService.StartEditReminderDialog(chatId, ct);
+                return true;
+            case "/info":
+                await SendInfoMessage(chatId, ct);
                 return true;
             default:
                 return false;
@@ -180,6 +183,9 @@ public class TelegramBotService
                 return true;
             case "ℹ️ Инструкция":
                 await SendInfoMessage(chatId, ct);
+                return true;
+            case "⏳ История задач":
+                await HandleHistoryCommand(chatId, ct);
                 return true;
             default:
                 return false;
@@ -329,9 +335,9 @@ public class TelegramBotService
 
     private static readonly ReplyKeyboardMarkup MainKeyboard = new(new[]
     {
-        new KeyboardButton[] { "📋 Список задач", "➕ Добавить задачу" },
+        new KeyboardButton[] { "📋 Список задач",  "⏳ История задач","ℹ️ Инструкция" },
         new KeyboardButton[] { "📅 Сегодня", "🗓️ Неделя", "📆 Месяц" },
-        new KeyboardButton[] { "✏️ Изменить задачу", "❌ Удалить задачу", "ℹ️ Инструкция" },
+        new KeyboardButton[] { "➕ Добавить задачу","✏️ Изменить задачу", "❌ Удалить задачу" },
         new KeyboardButton[]{"⏰ Добавить напоминание", "🔄 Обновить напоминание","🗑️ Удалить напоминание" }
     })
     {
