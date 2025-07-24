@@ -104,8 +104,8 @@ jobs:
           username: ${{ secrets.BOT_SSH_USER }}
           key: ${{ secrets.BOT_SSH_KEY }}
           script: |
-            export TelegramBot__Token='${{ secrets.TelegramBot__Token }}'
-            export Grpc__BackendUrl='${{ secrets.Grpc__BackendUrl }}'
+            export TelegramBot__Token='${{ secrets.TELEGRAMBOT__TOKEN }}'
+            export Grpc__BackendUrl='${{ secrets.GRPC_BACKENDURL }}'
             
             if ! dotnet --list-runtimes | grep 'Microsoft.AspNetCore.App 8.0' > /dev/null; then
               echo "Installing ASP.NET Core Runtime..."
@@ -166,8 +166,8 @@ jobs:
           username: ${{ secrets.BACKEND_SSH_USER }}
           key: ${{ secrets.BACKEND_SSH_KEY }}
           script: |
-            export Database__ConnectionString='${{ secrets.Database__ConnectionString }}'
-            export Database__HangfireConnectionString='${{ secrets.Database__HangfireConnectionString }}'
+            export Database__ConnectionString='${{ secrets.DATABASE__CONNECTIONSTRING }}'
+            export Database__HangfireConnectionString='${{ secrets.DATABASE__HANGFIRECONNECTIONSTRING }}'
             export ASPNETCORE_ENVIRONMENT='Production'
             
             if ! dotnet --list-runtimes | grep 'Microsoft.AspNetCore.App 8.0' > /dev/null; then
