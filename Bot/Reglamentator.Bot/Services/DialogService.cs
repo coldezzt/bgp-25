@@ -38,7 +38,12 @@ public class DialogService
     /// <param name="ct">Токен отмены</param>
     public async Task StartAddDialog(long chatId, CancellationToken ct = default)
     {
-        _userDialogs[chatId] = new DialogState { Step = DialogStep.AskTheme };
+        _userDialogs[chatId] = new DialogState
+        {
+            Step = DialogStep.AskTheme, 
+            ActionType = ActionType.Create,
+            DialogObject = DialogObject.Operation
+        };
         await _botClient.SendMessage(chatId, "Введите тему задачи:", cancellationToken: ct);
     }
     
@@ -50,20 +55,60 @@ public class DialogService
     /// <param name="ct">Токен отмены</param>
     public async Task StartEditDialog(long chatId, CancellationToken ct = default)
     {
-        _userDialogs[chatId] = new DialogState { Step = DialogStep.AskOperationId };
+        _userDialogs[chatId] = new DialogState
+        {
+            Step = DialogStep.AskOperationId,
+            ActionType = ActionType.Update,
+            DialogObject = DialogObject.Operation
+        };
         await _botClient.SendMessage(chatId, "Введите id задачи:", cancellationToken: ct);
     }
-    private async Task SendCurrentOperationState(long chatId, CancellationToken ct)
+    
+    /// <summary>
+    /// Запускает диалог создания напоминания
+    /// </summary>
+    /// <param name="chatId">ID чата пользователя</param>
+    /// <param name="ct">Токен отмены</param>
+    public async Task StartAddReminderDialog(long chatId, CancellationToken ct = default)
     {
-        if (!_userDialogs.TryGetValue(chatId, out var state)) return;
-
-        var message = $"Текущие значения операции:\n\n" +
-                      $"Тема: {state.Theme}\n" +
-                      $"Описание: {state.Description}\n" +
-                      $"Дата: {state.Date:yyyy-MM-dd}\n" +
-                      $"Периодичность: {state.Cron}";
-
-        await _botClient.SendMessage(chatId, message, cancellationToken: ct);
+        _userDialogs[chatId] = new DialogState
+        {
+            Step = DialogStep.AskOperationId, 
+            ActionType = ActionType.Create,
+            DialogObject = DialogObject.Reminder
+        };
+        await _botClient.SendMessage(chatId, "Введите id операции", cancellationToken: ct);
+    }
+    /// <summary>
+    /// Запускает диалог обновления напоминания
+    /// </summary>
+    /// <param name="chatId">ID чата пользователя</param>
+    /// <param name="ct">токен отмены</param>
+    public async Task StartEditReminderDialog(long chatId, CancellationToken ct = default)
+    {
+        _userDialogs[chatId] = new DialogState
+        {
+            Step = DialogStep.AskOperationId, 
+            ActionType = ActionType.Update,
+            DialogObject = DialogObject.Reminder
+        };
+        await _botClient.SendMessage(chatId, "\"Введите id операции", cancellationToken: ct);
+    }
+    
+    /// <summary>
+    ///Запускает диалог создания 
+    /// </summary>
+    /// <param name="chatId">ID чата пользователя</param>
+    /// <param name="ct">токен отмены</param>
+    public async Task StartDeleteReminderDialog(long chatId, CancellationToken ct = default)
+    {
+        _userDialogs[chatId] = new DialogState
+        {
+            Step = DialogStep.AskOperationId,
+            ActionType = ActionType.Delete,
+            DialogObject = DialogObject.Reminder
+        };
+        await _botClient.SendMessage(chatId, "\"Введите id операции", cancellationToken: ct);
     }
     /// <summary>
     /// Обрабатывает шаг диалога.
@@ -76,12 +121,14 @@ public class DialogService
         var chatId = message.Chat.Id;
         if (!_userDialogs.TryGetValue(chatId, out var state))
             return false;
-
-
+        
         switch (state.Step)
         {
             case DialogStep.AskOperationId:
                 await HandleOperationIdStep(message, state, chatId, ct);
+                break;
+            case DialogStep.AskReminderId:
+                await HandleReminderIdStep(message, state, chatId, ct);
                 break;
             case DialogStep.AskTheme:
                 await HandleThemeStep(message, state, chatId, ct);
@@ -124,6 +171,66 @@ public class DialogService
         _userDialogs.TryRemove(chatId, out _);
     }
 
+    private async Task HandleReminderIdStep(Message message, DialogState state, long chatId, CancellationToken ct)
+    {
+        if ( !long.TryParse(message.Text, out long reminderId))
+        {
+            await _botClient.SendMessage(chatId, "Используйте правильный формат id", cancellationToken: ct);
+            return;
+        }
+
+        if (state.ActionType == ActionType.Delete)
+        {
+            var result = _reminderClient.DeleteOperation(new DeleteReminderRequest
+            {
+                OperationId = state.OperationId, 
+                ReminderId = reminderId, 
+                TelegramId = chatId
+            });
+            if (!result.Status.IsSuccess)
+            {
+                await CompleteDialog(chatId, "Не удалось удалить напоминание",ct);
+                return;
+            }
+
+            await CompleteDialog(chatId, "Напоминание удалено", ct);
+        }
+        var reminder = state.Reminders.FirstOrDefault(x => x.Id == reminderId);
+        if (reminder == null)
+        {
+            await CompleteDialog(chatId, "Не удалось найти напоминание",ct);
+            return;
+        }
+        state.ReminderId = reminderId;
+        state.ReminderCron = reminder.OffsetBeforeExecution;
+        state.ReminderMessage = reminder.MessageTemplate;
+        state.Step = DialogStep.AskReminderMessage;
+        await _botClient.SendMessage(chatId, "Введите сообщение нового напоминания", cancellationToken: ct);
+    }
+    private async Task SendCurrentOperationState(long chatId, CancellationToken ct)
+    {
+        if (!_userDialogs.TryGetValue(chatId, out var state)) return;
+        var remindersInfo = string.Join("\n", state.Reminders.Select(r => 
+            $"  ⏰ [{r.Id}] {r.MessageTemplate} (за {r.OffsetBeforeExecution} до)"));
+        var message = $"Текущие значения операции:\n\n" +
+                      $"Тема: {state.Theme}\n" +
+                      $"Описание: {state.Description}\n" +
+                      $"Дата: {state.Date:yyyy-MM-dd}\n" +
+                      $"Периодичность: {state.OperationCron}"+
+                      $"Напоминания:\n{remindersInfo}";;
+        
+        await _botClient.SendMessage(chatId, message, cancellationToken: ct);
+    }
+    private async Task SendCurrentReminderState(long chatId, CancellationToken ct)
+    {
+        if (!_userDialogs.TryGetValue(chatId, out var state)) return;
+
+        var message = $"Текущие значения напоминания:\n\n" +
+                      $"Текст: {state.ReminderMessage}\n" +
+                      $"Время напоминания: {state.ReminderCron} до события";
+
+        await _botClient.SendMessage(chatId, message, cancellationToken: ct);
+    }
     private async Task HandleOperationIdStep(Message message, DialogState state, long chatId, CancellationToken ct)
     {
         if ( !long.TryParse(message.Text, out long operationId))
@@ -137,25 +244,44 @@ public class DialogService
             await _botClient.SendMessage(chatId, "Не удалось получить операцию, возможно она не существует", cancellationToken: ct);
             return;
         }
-        state.Step = DialogStep.AskTheme;
-        state.OperationType = OperationType.Update;
         state.OperationId = operationId;
         state.Theme = operation.Operation.Theme;
         state.Description = operation.Operation.Description;
         state.Date = operation.Operation.StartDate.ToDateTime();
-        state.Cron = operation.Operation.Cron;
+        state.OperationCron = operation.Operation.Cron;
+        state.Reminders = operation.Operation.Reminders;
         await SendCurrentOperationState(chatId, ct);
-        await _botClient.SendMessage(chatId, "Введите новую тему задачи (или оставьте текущую):", cancellationToken: ct);
+        if (state.DialogObject == DialogObject.Operation)
+        {
+            state.Step = DialogStep.AskTheme;
+            await _botClient.SendMessage(chatId, "Введите новую тему задачи (или оставьте текущую):", cancellationToken: ct);
+        }
+        else if (state is { DialogObject: DialogObject.Reminder, ActionType: ActionType.Create })
+        {
+            state.Step = DialogStep.AskReminderMessage;
+            await _botClient.SendMessage(chatId, "Введите сообщение нового напоминания", cancellationToken: ct);
+        }
+        else if (state is {DialogObject: DialogObject.Reminder, ActionType:ActionType.Update})
+        {
+            state.Step = DialogStep.AskReminderId;
+            await _botClient.SendMessage(chatId, "Введите id напоминания, которое хотите изменить", cancellationToken: ct);
+        }
+        else
+        {
+            state.Step = DialogStep.AskReminderId;
+            await _botClient.SendMessage(chatId, "Введите id напоминания, которое хотите удалить", cancellationToken: ct);
+        }
+        
     }
     private async Task HandleDescriptionStep(Message message, DialogState state, long chatId, CancellationToken ct)
     {
         state.Description = message.Text ?? "";
         state.Step = DialogStep.AskDate;
-        if (state.OperationType == OperationType.Create)
+        if (state.ActionType == ActionType.Create)
         {
             await _botClient.SendMessage(chatId, "Введите дату (гггг-мм-дд):", cancellationToken: ct);
         }
-        else if (state.OperationType == OperationType.Update)
+        else if (state.ActionType == ActionType.Update)
         {
             await SendCurrentOperationState(chatId, ct);
             await _botClient.SendMessage(chatId, "Введите новую дату (гггг-мм-дд) (или оставьте текущую):", cancellationToken: ct);
@@ -165,11 +291,11 @@ public class DialogService
     {
         state.Theme = message.Text ?? "";
         state.Step = DialogStep.AskDescription;
-        if (state.OperationType == OperationType.Create)
+        if (state.ActionType == ActionType.Create)
         {
             await _botClient.SendMessage(chatId, "Введите описание задачи:", cancellationToken: ct);
         }
-        else if (state.OperationType == OperationType.Update)
+        else if (state.ActionType == ActionType.Update)
         {
             await SendCurrentOperationState(chatId, ct);
             await _botClient.SendMessage(chatId, "Введите новое описание задачи (или оставьте текущее):", cancellationToken: ct);
@@ -182,11 +308,11 @@ public class DialogService
         {
             state.Date = date;
             state.Step = DialogStep.AskTimeRange;
-            if (state.OperationType == OperationType.Create)
+            if (state.ActionType == ActionType.Create)
             {
                 await AskTimeRangeSelection(chatId, ct);
             }
-            else if (state.OperationType == OperationType.Update)
+            else if (state.ActionType == ActionType.Update)
             {
                 await SendCurrentOperationState(chatId, ct);
                 await AskTimeRangeSelection(chatId, ct, "Выберите новую периодичность (или оставьте текущую):");
@@ -203,8 +329,8 @@ public class DialogService
         if (Enum.TryParse<TimeRange>(message.Text, out var timeRange) && 
             Enum.IsDefined(typeof(TimeRange), timeRange))
         {
-            state.Cron = timeRange;
-            if (state.OperationType == OperationType.Create)
+            state.OperationCron = timeRange;
+            if (state.ActionType == ActionType.Create)
             {
                 await CreateOperationAndCompleteDialog(state, chatId, ct);
             }
@@ -270,7 +396,12 @@ public class DialogService
             ResizeKeyboard = true,
             OneTimeKeyboard = true
         };
-
+        
+        if (state.ActionType == ActionType.Update)
+        {
+            await SendCurrentReminderState(chatId, ct);
+                
+        }
         await _botClient.SendMessage(
             chatId,
             "За сколько времени напомнить?",
@@ -280,43 +411,94 @@ public class DialogService
     
     private async Task HandleReminderTimeStep(Message message, DialogState state, long chatId, CancellationToken ct)
     {
-        if (Enum.TryParse<TimeRange>(message.Text, out var timeRange))
+        TimeRange? timeRange = null;
+        
+        if (message.Text != "Оставить текущее" && 
+            Enum.TryParse<TimeRange>(message.Text, out var parsedTime))
         {
-            var request = new AddReminderRequest
-            {
-                TelegramId = chatId,
-                OperationId = state.OperationId,
-                Reminder = new CreateReminderDto
-                {
-                    MessageTemplate = state.ReminderMessage,
-                    OffsetBeforeExecution = timeRange
-                }
-            };
+            timeRange = parsedTime;
+        }
+        else if (message.Text != "Оставить текущее")
+        {
+            await _botClient.SendMessage(
+                chatId, 
+                "Неверный выбор. Пожалуйста, выберите время из предложенных вариантов.", 
+                cancellationToken: ct);
+            return;
+        }
 
-            var response = await _reminderClient.AddReminderAsync(request, cancellationToken: ct);
-            
-            if (response.Status.IsSuccess)
-            {
-                await CompleteDialog(chatId, 
-                    $"✅ Напоминание добавлено: \"{state.ReminderMessage}\" (за {timeRange} до)", 
-                    ct);
-            }
-            else
-            {
-                await CompleteDialog(chatId, 
-                    "❌ Не удалось добавить напоминание. Задача сохранена.", 
-                    ct);
-            }
+        if (state.ActionType == ActionType.Create)
+        {
+            await CreateReminder(state, chatId, timeRange ?? state.ReminderCron, ct);
         }
         else
         {
-            await _botClient.SendMessage(chatId, 
-                "Неверный выбор. Пожалуйста, выберите время из предложенных вариантов.", 
-                cancellationToken: ct);
+            await UpdateReminder(state, chatId, timeRange, ct);
         }
     }
 
+    private async Task CreateReminder(DialogState state, long chatId, TimeRange timeRange, CancellationToken ct)
+    {
+        var request = new AddReminderRequest
+        {
+            TelegramId = chatId,
+            OperationId = state.OperationId,
+            Reminder = new CreateReminderDto
+            {
+                MessageTemplate = state.ReminderMessage,
+                OffsetBeforeExecution = timeRange
+            }
+        };
 
+        var response = await _reminderClient.AddReminderAsync(request, cancellationToken: ct);
+        
+        if (response.Status.IsSuccess)
+        {
+            await CompleteDialog(
+                chatId, 
+                $"✅ Напоминание добавлено: \"{state.ReminderMessage}\" (за {timeRange} до события)", 
+                ct);
+        }
+        else
+        {
+            await CompleteDialog(
+                chatId, 
+                "❌ Не удалось добавить напоминание", 
+                ct);
+        }
+    }
+
+    private async Task UpdateReminder(DialogState state, long chatId, TimeRange? timeRange, CancellationToken ct)
+    {
+        var request = new UpdateReminderRequest
+        {
+            TelegramId = chatId,
+            Reminder = new UpdateReminderDto
+            {
+                Id = state.ReminderId,
+                MessageTemplate = state.ReminderMessage,
+                OffsetBeforeExecution = timeRange ?? state.ReminderCron
+            }
+        };
+
+        var response = await _reminderClient.UpdateOperationAsync(request, cancellationToken: ct);
+        
+        if (response.Status.IsSuccess)
+        {
+            await CompleteDialog(
+                chatId, 
+                $"✅ Напоминание обновлено: \"{state.ReminderMessage}\" (за {timeRange ?? state.ReminderCron} до события)", 
+                ct);
+        }
+        else
+        {
+            await CompleteDialog(
+                chatId, 
+                "❌ Не удалось обновить напоминание", 
+                ct);
+        }
+    }
+    
     private async Task CreateOperationAndCompleteDialog(DialogState state, long chatId, CancellationToken ct)
     {
         var request = new CreateOperationRequest
@@ -327,7 +509,7 @@ public class DialogService
                 Theme = state.Theme,
                 Description = state.Description,
                 StartDate = Timestamp.FromDateTime(DateTime.SpecifyKind(state.Date, DateTimeKind.Utc)),
-                Cron = state.Cron
+                Cron = state.OperationCron
             }
         };
         
@@ -368,7 +550,7 @@ public class DialogService
                 Theme = state.Theme,
                 Description = state.Description,
                 StartDate = Timestamp.FromDateTime(DateTime.SpecifyKind(state.Date, DateTimeKind.Utc)),
-                Cron = state.Cron
+                Cron = state.OperationCron
             }
         };
         
@@ -409,18 +591,24 @@ public class DialogService
     private class DialogState
     {
         public DialogStep Step { get; set; }
-        public OperationType OperationType { get; set; }
+        public ActionType ActionType { get; set; }
+        public DialogObject DialogObject { get; set; }
         public long OperationId { get; set; }
+        public long ReminderId { get; set; }
         public string? Theme { get; set; }
         public string? Description { get; set; }
         public DateTime Date { get; set; }
-        public TimeRange Cron { get; set; }
+        public TimeRange OperationCron { get; set; }
+        public TimeRange ReminderCron { get; set; }
+        public IEnumerable<ReminderDto> Reminders { get; set; }
         public string? ReminderMessage { get; set; }
+        
     }
 
     private enum DialogStep
     {
         AskOperationId,
+        AskReminderId,
         AskTheme,
         AskDescription,
         AskDate,
@@ -430,9 +618,16 @@ public class DialogService
         AskReminderTime
     }
 
-    private enum OperationType
+    private enum ActionType
     {
         Create,
-        Update
+        Update,
+        Delete
+    }
+
+    private enum DialogObject
+    {
+        Reminder,
+        Operation
     }
 }

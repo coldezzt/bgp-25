@@ -110,10 +110,10 @@ public class TelegramBotService
             case "/list":
                 await HandleListCommand(chatId, ct);
                 return true;
-            case "/add":
+            case "/operation-add":
                 await _dialogService.StartAddDialog(chatId, ct);
                 return true;
-            case "/delete":
+            case "/operation-delete":
                 await HandleDeleteCommand(chatId, text, ct);
                 return true;
             case "/today":
@@ -125,11 +125,20 @@ public class TelegramBotService
             case "/month":
                 await HandleFilteredListCommand(chatId, "month", ct);
                 return true;
-            case "/edit":
+            case "/operation-edit":
                 await _dialogService.StartEditDialog(chatId, ct);
                 return true;
             case "/history":
                 await HandleHistoryCommand(chatId, ct);
+                return true;
+            case "/reminder-add":
+                await _dialogService.StartAddReminderDialog(chatId, ct);
+                return true;
+            case "/reminder-delete":
+                await _dialogService.StartDeleteReminderDialog(chatId, ct);
+                return true;
+            case "/reminder-update":
+                await _dialogService.StartEditReminderDialog(chatId, ct);
                 return true;
             default:
                 return false;
@@ -142,7 +151,7 @@ public class TelegramBotService
             case "📋 Список задач":
                 await HandleListCommand(chatId, ct);
                 return true;
-            case "➕ Добавить":
+            case "➕ Добавить задачу":
                 await _dialogService.StartAddDialog(chatId, ct);
                 return true;
             case "📅 Сегодня":
@@ -154,11 +163,20 @@ public class TelegramBotService
             case "📆 Месяц":
                 await HandleFilteredListCommand(chatId, "month", ct);
                 return true;
-            case "✏️ Изменить":
+            case "✏️ Изменить задачу":
                 await _dialogService.StartEditDialog(chatId, ct);
                 return true;
-            case "❌ Удалить":
+            case "❌ Удалить задачу":
                 await HandleDeleteCommand(chatId, text, ct);
+                return true;
+            case "⏰ Добавить напоминание":
+                await _dialogService.StartAddReminderDialog(chatId, ct);
+                return true;
+            case "🔄 Обновить напоминание":
+                await _dialogService.StartEditReminderDialog(chatId, ct);
+                return true;
+            case "🗑️ Удалить напоминание":
+                await _dialogService.StartDeleteReminderDialog(chatId, ct);
                 return true;
             case "ℹ️ Инструкция":
                 await SendInfoMessage(chatId, ct);
