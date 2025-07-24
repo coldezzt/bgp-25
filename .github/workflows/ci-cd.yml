@@ -72,10 +72,10 @@ jobs:
     needs: build-and-test
     steps:
       - name: Download bot artifact
-      	uses: actions/download-artifact@v4
-      	with:
-      	  name: bot
-      	  path: ./publish/bot
+        uses: actions/download-artifact@v4
+        with:
+          name: bot
+          path: ./publish/bot
           
       - name: Check if bot artifact exists
         id: check
@@ -113,10 +113,10 @@ jobs:
     needs: build-and-test
     steps:
       - name: Download backend artifact
-      	uses: actions/download-artifact@v4
-      	with:
-      	  name: backend
-      	  path: ./publish/backend
+        uses: actions/download-artifact@v4
+        with:
+          name: backend
+          path: ./publish/backend
     
       - name: Check if backend artifact exists
         id: check
