@@ -73,6 +73,7 @@ jobs:
     steps:
       - name: Download bot artifact
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: bot
           path: ./publish/bot
@@ -114,6 +115,7 @@ jobs:
     steps:
       - name: Download backend artifact
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: backend
           path: ./publish/backend
