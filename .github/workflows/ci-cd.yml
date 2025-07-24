@@ -105,7 +105,7 @@ jobs:
           key: ${{ secrets.BOT_SSH_KEY }}
           script: |
             export TelegramBot__Token='${{ secrets.TelegramBot__Token }}'
-            export Grpc__BackendUrl='${{ secrets.Grpc__BackendUrl }'
+            export Grpc__BackendUrl='${{ secrets.Grpc__BackendUrl }}'
             
             if ! dotnet --list-runtimes | grep 'Microsoft.AspNetCore.App 8.0' > /dev/null; then
               echo "Installing ASP.NET Core Runtime..."
