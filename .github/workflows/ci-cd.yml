@@ -153,8 +153,6 @@ jobs:
           key: ${{ secrets.BACKEND_SSH_KEY }}
           script: |
             docker rm -f reglamentator-backend || true
-            echo ${{ secrets.DATABASE__CONNECTIONSTRING }}
-            echo ${{ secrets.DATABASE__HANGFIRECONNECTIONSTRING }}
             docker run -d \
               --name reglamentator-backend \
               -e Database__ConnectionString="${{ secrets.DATABASE__CONNECTIONSTRING }}" \
