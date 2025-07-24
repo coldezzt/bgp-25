@@ -18,13 +18,11 @@
         <PackageReference Include="Telegram.Bot" Version="22.6.0" />
         
     </ItemGroup>
-	<ItemGroup>
-		<Protobuf Include="Protos\reglamentator.proto" GrpcServices="Client" />
-	</ItemGroup>
-	
-    <ItemGroup>
-      <ProjectReference Include="..\..\Backend\Reglamentator.WebAPI\Reglamentator.WebAPI.csproj" />
-    </ItemGroup>
+    
+<ItemGroup>
+	<Protobuf Include="Protos\reglamentator.proto" GrpcServices="Client" />
+</ItemGroup>
+
 
     <ItemGroup>
         <None Update="Resources\**">
