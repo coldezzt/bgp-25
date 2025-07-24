@@ -1,6 +1,7 @@
 using Reglamentator.Bot.Extensions;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Configuration.AddEnvironmentVariables();
 var token = builder.Configuration.GetRequiredValue("TelegramBot:Token");
 var grpcUrl = builder.Configuration.GetRequiredValue("Grpc:BackendUrl");
 

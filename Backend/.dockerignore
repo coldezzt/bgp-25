@@ -24,3 +24,6 @@ appsettings.Development.json
 
 # Tests
 Tests/
+
+Dockerfile
+.dockerignore

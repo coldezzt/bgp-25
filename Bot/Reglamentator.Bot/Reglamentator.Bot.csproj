@@ -4,7 +4,6 @@
         <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <UserSecretsId>dotnet-Reglamentator.Bot-f00dadfc-bf84-4343-ba00-135679a50f0a</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>
@@ -18,13 +17,11 @@
         <PackageReference Include="Telegram.Bot" Version="22.6.0" />
         
     </ItemGroup>
-	<ItemGroup>
-		<Protobuf Include="Protos\reglamentator.proto" GrpcServices="Client" />
-	</ItemGroup>
-	
-    <ItemGroup>
-      <ProjectReference Include="..\..\Backend\Reglamentator.WebAPI\Reglamentator.WebAPI.csproj" />
-    </ItemGroup>
+    
+<ItemGroup>
+	<Protobuf Include="Protos\reglamentator.proto" GrpcServices="Client" />
+</ItemGroup>
+
 
     <ItemGroup>
         <None Update="Resources\**">
