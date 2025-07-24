@@ -1,0 +1,186 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+option csharp_namespace = "Reglamentator.WebAPI";
+
+package reglamentator;
+
+//Services
+service Operation {
+  rpc GetPlanedOperations (PlanedOperationsRequest) returns (PlanedOperationsResponse);
+  rpc GetOperationHistory (OperationHistoryRequest) returns (OperationHistoryResponse);
+  rpc GetOperation (GetOperationRequest) returns (OperationResponse);
+  rpc CreateOperation (CreateOperationRequest) returns (OperationResponse);
+  rpc UpdateOperation (UpdateOperationRequest) returns (OperationResponse);
+  rpc DeleteOperation (DeleteOperationRequest) returns (OperationResponse);
+}
+
+service Reminder {
+  rpc AddReminder (AddReminderRequest) returns (ReminderResponse);
+  rpc UpdateOperation (UpdateReminderRequest) returns (ReminderResponse);
+  rpc DeleteOperation (DeleteReminderRequest) returns (ReminderResponse);
+}
+
+service User {
+  rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
+}
+
+service Notification {
+  rpc ListenForNotifications (NotificationRequest) returns (stream NotificationResponse);
+}
+
+//Dtos
+message TelegramUserDto {
+  int64 id = 1;
+  int64 telegram_id = 2;
+}
+
+message CreateOperationDto {
+  string theme = 1;
+  string description = 2;
+  google.protobuf.Timestamp start_date = 3;
+  TimeRange cron = 4;
+}
+
+message CreateReminderDto {
+  string message_template = 1;
+  TimeRange offset_before_execution = 2;
+}
+
+message UpdateOperationDto {
+  int64 id = 1;
+  string theme = 2;
+  string description = 3;
+  google.protobuf.Timestamp start_date = 4;
+  TimeRange cron = 5;
+}
+
+message UpdateReminderDto {
+  int64 id = 1;
+  string message_template = 2;
+  TimeRange offset_before_execution = 3;
+}
+
+message OperationDto {
+  int64 id = 1;
+  string theme = 2;
+  string description = 3;
+  google.protobuf.Timestamp start_date = 4;
+  TimeRange cron = 5;
+  repeated ReminderDto reminders = 6;
+}
+
+message ReminderDto {
+  int64 id = 1;
+  string message_template = 2;
+  TimeRange offset_before_execution = 3;
+}
+
+message OperationInstanceDto {
+  int64 id = 1;
+  google.protobuf.Timestamp scheduled_at = 2;
+  google.protobuf.Timestamp executed_at = 3;
+  google.protobuf.StringValue result = 4;
+  OperationDto operation = 5;
+}
+
+enum TimeRange {
+  NONE = 0;
+  MIN15 = 1;
+  HOUR = 2;
+  DAY = 3;
+  WEEK = 4;
+  MONTH = 5;
+}
+
+//Requests & Responses
+message StatusResponse {
+  string status_message = 1;
+  bool is_success = 2;
+}
+
+message CreateUserRequest {
+  int64 telegram_id = 1;
+}
+
+message CreateUserResponse {
+  TelegramUserDto user = 1;
+  StatusResponse status = 2;
+}
+
+message PlanedOperationsRequest {
+  int64 telegram_id = 1;
+  TimeRange range = 2;
+}
+
+message OperationHistoryRequest {
+  int64 telegram_id = 1;
+}
+
+message GetOperationRequest {
+  int64 telegram_id = 1;
+  int64 operation_id = 2;
+}
+
+message CreateOperationRequest {
+  int64 telegram_id = 1;
+  CreateOperationDto operation = 2;
+}
+
+message UpdateOperationRequest {
+  int64 telegram_id = 1;
+  UpdateOperationDto operation = 2;
+}
+
+message DeleteOperationRequest {
+  int64 telegram_id = 1;
+  int64 operation_id = 2;
+}
+
+message PlanedOperationsResponse {
+  repeated OperationInstanceDto instances = 1;
+  StatusResponse status = 2;
+}
+
+message OperationHistoryResponse {
+  repeated OperationInstanceDto history = 1;
+  StatusResponse status = 2;
+}
+
+message OperationResponse {
+  OperationDto operation = 1;
+  StatusResponse status = 2;
+}
+
+message AddReminderRequest {
+  int64 telegram_id = 1;
+  int64 operation_id = 2;
+  CreateReminderDto reminder = 3;
+}
+
+message UpdateReminderRequest {
+  int64 telegram_id = 1;
+  int64 operation_id = 2;
+  UpdateReminderDto reminder = 3;
+}
+
+message DeleteReminderRequest {
+  int64 telegram_id = 1;
+  int64 operation_id = 2;
+  int64 reminder_id = 3;
+}
+
+message ReminderResponse {
+  ReminderDto reminder = 1;
+  StatusResponse status = 2;
+}
+
+message NotificationRequest {
+}
+
+message NotificationResponse {
+  int64 telegram_id = 1;
+  string message = 2;
+}

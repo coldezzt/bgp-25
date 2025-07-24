@@ -1,0 +1,19 @@
+using FluentValidation;
+
+namespace Reglamentator.WebAPI.Validators;
+
+public class UpdateReminderDtoValidator : AbstractValidator<UpdateReminderDto>
+{
+    public UpdateReminderDtoValidator()
+    {
+        RuleFor(x => x.Id)
+            .GreaterThan(0)
+            .WithMessage("ID напоминания должен быть положительным числом");
+
+        RuleFor(x => x.MessageTemplate)
+            .NotEmpty()
+            .WithMessage("Шаблон сообщения обязателен")
+            .MaximumLength(1000)
+            .WithMessage("Максимальная длина шаблона: 1000");
+    }
+}
