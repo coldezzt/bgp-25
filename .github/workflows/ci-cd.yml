@@ -27,7 +27,7 @@ jobs:
               - 'Bot/**'
               - 'Shared/**'
   
-  build-and-test:
+  build-and-test-bot:
     runs-on: ubuntu-latest
     needs: check-changes
     steps:
@@ -45,13 +45,9 @@ jobs:
       - name: Test
         run: dotnet test Tests/Reglamentator.Test.Bot/Reglamentator.Test.Bot.csproj --verbosity normal
       
-      - name: Publish Bot
+      - name: Publish
         if: needs.check-changes.outputs.bot_changes == 'true'
         run: dotnet publish Bot/Reglamentator.Bot/Reglamentator.Bot.csproj -c Release -o ./bot
-      
-      - name: Publish Backend
-        if: needs.check-changes.outputs.backend_changed == 'true'
-        run: dotnet publish Backend/Reglamentator.WebAPI/Reglamentator.WebAPI.csproj -c Release -o ./backend
       
       - name: Upload bot artifact
         if: needs.check-changes.outputs.bot_changes == 'true'
@@ -59,6 +55,28 @@ jobs:
         with:
           name: bot
           path: ./bot
+          
+  build-and-test-backend:
+    runs-on: ubuntu-latest
+    needs: check-changes
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+          
+      - name: Restore
+        run: dotnet restore Reglamentator.sln
+
+      - name: Build
+        run: dotnet build Reglamentator.sln --configuration Release --no-restore
+        
+      - name: Test
+        run: dotnet test Tests/Reglamentator.Test.Backend/Reglamentator.Test.Backend.csproj --verbosity normal
+        
+      - name: Publish
+        if: needs.check-changes.outputs.backend_changed == 'true'
+        run: dotnet publish Backend/Reglamentator.WebAPI/Reglamentator.WebAPI.csproj -c Release -o ./backend
 
       - name: Upload backend artifact
         if: needs.check-changes.outputs.backend_changed == 'true'
@@ -66,10 +84,10 @@ jobs:
         with:
           name: backend
           path: ./backend
-
+        
   publish-bot:
     runs-on: ubuntu-latest
-    needs: build-and-test
+    needs: ["build-and-test-bot", "build-and-test-backend"]
     steps:
       - name: Download bot artifact
         uses: actions/download-artifact@v4
