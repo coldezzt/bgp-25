@@ -137,7 +137,7 @@ public class DialogService
             await _botClient.SendMessage(chatId, "Не удалось получить операцию, возможно она не существует", cancellationToken: ct);
             return;
         }
-        state.Step = DialogStep.AskOperationId;
+        state.Step = DialogStep.AskTheme;
         state.OperationType = OperationType.Update;
         state.OperationId = operationId;
         state.Theme = operation.Operation.Theme;
@@ -378,12 +378,23 @@ public class DialogService
             await CompleteDialog(chatId, "❌ Не удалось обновить задачу", ct);
             return;
         }
+        state.Step = DialogStep.AskAddReminder;
+        
+        var keyboard = new ReplyKeyboardMarkup(new[]
+        {
+            new[] { new KeyboardButton("Да") },
+            new[] { new KeyboardButton("Нет") }
+        })
+        {
+            ResizeKeyboard = true,
+            OneTimeKeyboard = true
+        };
+
         await _botClient.SendMessage(
-            chatId, 
-            $"✅ Задача обновлена!{(state.Cron != TimeRange.None ? $" Периодичность: {state.Cron}" : "")}", 
-            replyMarkup: new ReplyKeyboardRemove(),
+            chatId,
+            "✅ Задача обновлена! Хотите добавить напоминание?",
+            replyMarkup: keyboard,
             cancellationToken: ct);
-        _userDialogs.TryRemove(chatId, out _);
     }
     private async Task CompleteDialog(long chatId, string message, CancellationToken ct)
     {

@@ -1,3 +1,4 @@
+using Grpc.Net.Client.Balancer;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -127,11 +128,13 @@ public class TelegramBotService
             case "/edit":
                 await _dialogService.StartEditDialog(chatId, ct);
                 return true;
+            case "/history":
+                await HandleHistoryCommand(chatId, ct);
+                return true;
             default:
                 return false;
         }
     }
-    
     private async Task<bool> TryHandleMainMenuButton(long chatId, string text,CancellationToken ct)
     {
         switch (text)
@@ -177,6 +180,26 @@ public class TelegramBotService
         await _botClient.SendMessage(chatId, "Не удалось зарегистрироваться", cancellationToken: ct);
     }
 
+    private async Task HandleHistoryCommand(long chatId, CancellationToken ct)
+    {
+        var result = await _operationClient.GetOperationHistoryAsync(new OperationHistoryRequest { TelegramId = chatId });
+        if (!result.Status.IsSuccess)
+        {
+            await SendMessage(chatId, "Не удалось получить историю операций", ct: ct);
+            return;
+        }
+        var history = result.History;
+        if (history.Count == 0)
+        {
+            await SendMessage(chatId, "Нет задач.", null, ct);
+            return;
+        }
+        var operation = $"{history[0].Operation.Theme} - {history[0].Operation.StartDate} \n";
+        var list = history[0].Operation.Id + string.Join("\n",
+            history.Select(op => $"• [{op.Id}] {op.Result} : {op.ScheduledAt} - {op.ExecutedAt}"));
+        await SendMessage(chatId, "Ваща история задач", operation + list, ct);
+        
+    }
     private async Task HandleDeleteCommand(long chatId, string text, CancellationToken ct)
     {
         var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
