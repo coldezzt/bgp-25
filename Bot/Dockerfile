@@ -1,14 +1,15 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+﻿FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
 WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-COPY Bot/Reglamentator.Bot/Reglamentator.Bot.csproj Bot/Reglamentator.Bot/
-RUN dotnet restore Bot/Reglamentator.Bot/Reglamentator.Bot.csproj
+COPY Reglamentator.Bot/Reglamentator.Bot.csproj Reglamentator.Bot/
 
 COPY . .
-RUN dotnet publish Bot/Reglamentator.Bot/Reglamentator.Bot.csproj -c Release -o /app/publish
+
+RUN dotnet restore Reglamentator.Bot/Reglamentator.Bot.csproj
+RUN dotnet publish Reglamentator.Bot/Reglamentator.Bot.csproj -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
