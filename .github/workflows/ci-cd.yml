@@ -1,0 +1,138 @@
+name: ci-cd-pipeline
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend_changed: ${{ steps.filter.outputs.backend }}
+      bot_changes: ${{ steps.filter.outputs.bot }}
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Detect changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'Backend/**'
+              - 'Shared/**'
+            bot:
+              - 'Bot/**'
+              - 'Shared/**'
+  
+  build-and-test:
+    runs-on: ubuntu-latest
+    needs: check-changes
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+      
+      - name: Restore
+        run: dotnet restore Reglamentator.sln
+      
+      - name: Build
+        run: dotnet build Reglamentator.sln --configuration Release --no-restore
+      
+      - name: Test
+        run: dotnet test Tests/Reglamentator.Test.Bot/Reglamentator.Test.Bot.csproj --verbosity normal
+      
+      - name: Publish Bot
+        if: needs.check-changes.outputs.bot_changes == 'true'
+        run: dotnet publish Bot/Reglamentator.Bot/Reglamentator.Bot.csproj -c Release -o ./publish/bot
+      
+      - name: Publish Backend
+        if: needs.check-changes.outputs.backend_changed == 'true'
+        run: dotnet publish Backend/Reglamentator.WebAPI/Reglamentator.WebAPI.csproj -c Release -o ./publish/backend
+      
+      - name: Upload bot artifact
+        if: needs.check-changes.outputs.bot_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bot
+          path: ./publish/bot
+
+      - name: Upload backend artifact
+        if: needs.check-changes.outputs.backend_changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend
+          path: ./publish/backend
+
+  publish-bot:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - name: Check if bot artifact exists
+        id: check
+        run: echo "found=$([[ -d ./publish/bot ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+      - name: Stop if no bot artifact
+        if: steps.check.outputs.found == 'false'
+        run: echo "No bot artifact, skipping deploy."
+
+      - name: Copy to remote server
+        if: steps.check.outputs.found == 'true'
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.BOT_HOST }}
+          username: ${{ secrets.BOT_SSH_USER }}
+          key: ${{ secrets.BOT_SSH_KEY }}
+          source: "./publish/bot"
+          target: "/app/bot"
+
+      - name: Restart Bot service
+        if: steps.check.outputs.found == 'true'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.BOT_HOST }}
+          username: ${{ secrets.BOT_SSH_USER }}
+          key: ${{ secrets.BOT_SSH_KEY }}
+          script: |
+            export TELEGRAM_TOKEN='${{ secrets.TELEGRAM_TOKEN }}'
+            cd /app/bot
+            docker compose -f docker-compose.bot.yml down
+            docker compose -f docker-compose.bot.yml up -d --build
+  
+  publish-backend:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - name: Check if backend artifact exists
+        id: check
+        run: echo "found=$([[ -d ./publish/backend ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+      - name: Stop if no backend artifact
+        if: steps.check.outputs.found == 'false'
+        run: echo "No backend artifact, skipping deploy."
+
+      - name: Copy to remote server
+        if: steps.check.outputs.found == 'true'
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.BACKEND_HOST }}
+          username: ${{ secrets.BACKEND_SSH_USER }}
+          key: ${{ secrets.BACKEND_SSH_KEY }}
+          source: "./publish/backend"
+          target: "/app/backend"
+
+      - name: Restart Backend service
+        if: steps.check.outputs.found == 'true'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.BACKEND_HOST }}
+          username: ${{ secrets.BACKEND_SSH_USER }}
+          key: ${{ secrets.BACKEND_SSH_KEY }}
+          script: |
+            export DEFAULT_CONNECTION_STRING='${{ secrets.DEFAULT_CONNECTION_STRING }}'
+            cd /app/backend
+            docker compose -f docker-compose.backend.yml down
+            docker compose -f docker-compose.backend.yml up -d --build
