@@ -96,7 +96,9 @@ public class HangfireOperationJobHelper(
     
     private DateTime GetNextOccurrence(Operation operation)
     {
-        var cronExpression = CrontabSchedule.Parse(operation.Cron);
+        var cronExpression = CrontabSchedule.Parse(
+            operation.Cron, 
+            new CrontabSchedule.ParseOptions {IncludingSeconds = true});
         var nextOccurrence = cronExpression.GetNextOccurrence(operation.StartDate);
         
         return nextOccurrence;

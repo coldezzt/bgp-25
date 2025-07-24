@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Backend/Dockerfile
+    container_name: reglamentator-backend
+    restart: always
+    ports:
+      - "5000:80"
+    environment:
+      - DEFAULT_CONNECTION_STRING=${DEFAULT_CONNECTION_STRING}
+      - DOTNET_ENVIRONMENT=Production

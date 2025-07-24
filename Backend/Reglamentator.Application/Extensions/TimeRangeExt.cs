@@ -11,11 +11,11 @@ public static class TimeRangeExt
         return timeRange switch
         {
             TimeRange.None => null,
-            TimeRange.Min15 => $"{effectiveTime.Minute % 15}/15 * * * *",
-            TimeRange.Hour => $"{effectiveTime.Minute} * * * *",
-            TimeRange.Day => $"{effectiveTime.Minute} {effectiveTime.Hour} * * *",
-            TimeRange.Week => $"{effectiveTime.Minute} {effectiveTime.Hour} * * {(int)effectiveTime.DayOfWeek}",
-            TimeRange.Month => $"{effectiveTime.Minute} {effectiveTime.Hour} {effectiveTime.Day} * *",
+            TimeRange.Min15 => $"{effectiveTime.Second} {effectiveTime.Minute % 15}/15 * * * *",
+            TimeRange.Hour => $"{effectiveTime.Second} {effectiveTime.Minute} * * * *",
+            TimeRange.Day => $"{effectiveTime.Second} {effectiveTime.Minute} {effectiveTime.Hour} * * *",
+            TimeRange.Week => $"{effectiveTime.Second} {effectiveTime.Minute} {effectiveTime.Hour} * * {(int)effectiveTime.DayOfWeek}",
+            TimeRange.Month => $"{effectiveTime.Second} {effectiveTime.Minute} {effectiveTime.Hour} {effectiveTime.Day} * *",
             _ => throw new ArgumentOutOfRangeException(nameof(timeRange), timeRange, null)
         };
     }
@@ -27,14 +27,14 @@ public static class TimeRangeExt
 
         var parts = cronExpression.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-        if (parts.Length != 5)
-            throw new ArgumentException("Неправильный формат cron", nameof(cronExpression));
+        if (parts.Length != 6)
+            throw new ArgumentException($"Неправильный формат cron: {cronExpression}", nameof(cronExpression));
         
-        var isMin15 = parts[0].Contains("/15") && parts[1] == "*" && parts[2] == "*" && parts[3] == "*" && parts[4] == "*";
-        var isHour = parts[1] == "*" && parts[2] == "*" && parts[3] == "*" && parts[4] == "*";
-        var isDay = parts[2] == "*" && parts[3] == "*" && parts[4] == "*";
-        var isWeek = parts[2] == "*" && parts[3] == "*";
-        var isMonth = parts[3] == "*" && parts[4] == "*";
+        var isMin15 = parts[1].Contains("/15") && parts[2] == "*" && parts[3] == "*" && parts[4] == "*" && parts[5] == "*";
+        var isHour = parts[2] == "*" && parts[3] == "*" && parts[4] == "*" && parts[5] == "*";
+        var isDay = parts[3] == "*" && parts[4] == "*" && parts[5] == "*";
+        var isWeek = parts[3] == "*" && parts[4] == "*";
+        var isMonth = parts[4] == "*" && parts[5] == "*";
 
         return isMin15 ? TimeRange.Min15
              : isHour ? TimeRange.Hour

@@ -8,7 +8,15 @@ public class CreateOperationDtoValidator: AbstractValidator<CreateOperationDto>
     {
         RuleFor(x => x.Theme)
             .NotEmpty()
-            .WithMessage("Тема операции обязательна");
+            .WithMessage("Тема операции обязательна")
+            .MaximumLength(200)
+            .WithMessage("Максимальная длина темы: 200");
+        
+        RuleFor(x => x.Description)
+            .NotEmpty()
+            .WithMessage("Описание операции обязательно")
+            .MaximumLength(2000)
+            .WithMessage("Максимальная длина описания: 2000");
 
         RuleFor(x => x.StartDate)
             .NotNull()

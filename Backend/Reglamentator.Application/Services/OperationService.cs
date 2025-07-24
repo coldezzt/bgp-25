@@ -21,7 +21,7 @@ public class OperationService(
         TimeRange range, 
         CancellationToken cancellationToken = default)
     {
-        if (await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
+        if (!await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
             return Result.Fail(new NotFoundError(NotFoundError.UserNotFound));
         
         var planedOperations = await operationInstanceRepository
@@ -34,7 +34,7 @@ public class OperationService(
         long telegramId, 
         CancellationToken cancellationToken = default)
     {
-        if (await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
+        if (!await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
             return Result.Fail(new NotFoundError(NotFoundError.UserNotFound));
 
         var history = await operationInstanceRepository
@@ -45,7 +45,7 @@ public class OperationService(
 
     public async Task<Result<Operation>> GetOperationAsync(long telegramId, long operationId, CancellationToken cancellationToken = default)
     {
-        if (await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
+        if (!await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
             return Result.Fail(new NotFoundError(NotFoundError.UserNotFound));
         
         var operation = await operationRepository.GetWithRemindersAsync(
@@ -65,9 +65,13 @@ public class OperationService(
         CreateOperationDto operationDto, 
         CancellationToken cancellationToken = default)
     {
-        if (await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
+        if (!await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
             return Result.Fail(new NotFoundError(NotFoundError.UserNotFound));
 
+        //Remove this check in case to allow past operation start date processing
+        if (operationDto.StartDate < DateTime.UtcNow)
+            return Result.Fail(new CreateOperationError(CreateOperationError.OperationStartDateCanNotBeInPast));
+            
         var operation = CreateNewOperation(telegramId, operationDto);
         await operationRepository.InsertEntityAsync(operation, cancellationToken);
         
@@ -81,8 +85,12 @@ public class OperationService(
         UpdateOperationDto operationDto, 
         CancellationToken cancellationToken = default)
     {
-        if (await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
+        if (!await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
             return Result.Fail(new NotFoundError(NotFoundError.UserNotFound));
+        
+        //Remove this check in case to allow past operation start date processing
+        if (operationDto.StartDate < DateTime.UtcNow)
+            return Result.Fail(new CreateOperationError(CreateOperationError.OperationStartDateCanNotBeInPast));
         
         var operation = await operationRepository.GetWithDetailsForProcessJobAsync(
             op => op.Id == operationDto.Id, cancellationToken);
@@ -106,7 +114,7 @@ public class OperationService(
         long operationId, 
         CancellationToken cancellationToken = default)
     {
-        if (await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
+        if (!await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
             return Result.Fail(new NotFoundError(NotFoundError.UserNotFound));
         
         var operation = await operationRepository.GetEntityByFilterAsync(
@@ -230,7 +238,9 @@ public class OperationService(
 
     private DateTime GetNextOccurrence(Operation operation)
     {
-        var cronExpression = CrontabSchedule.Parse(operation.Cron);
+        var cronExpression = CrontabSchedule.Parse(
+            operation.Cron, 
+            new CrontabSchedule.ParseOptions {IncludingSeconds = true});
         var nextOccurrence = cronExpression.GetNextOccurrence(DateTime.UtcNow);
         
         return nextOccurrence;

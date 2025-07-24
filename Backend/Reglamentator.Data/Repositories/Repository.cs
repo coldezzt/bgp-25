@@ -8,7 +8,7 @@ public abstract class Repository<T>(AppDbContext appDbContext): IRepository<T> w
 {
     protected readonly AppDbContext AppDbContext = appDbContext;
         
-    public async Task<bool> IsExistAsync(long id, CancellationToken cancellationToken = default) =>
+    public virtual async Task<bool> IsExistAsync(long id, CancellationToken cancellationToken = default) =>
         await AppDbContext.Set<T>()
             .AnyAsync(e => e.Id == id, cancellationToken);
     

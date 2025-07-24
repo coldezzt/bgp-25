@@ -17,6 +17,8 @@ builder.Services.AddDbContext(builder.Configuration);
 
 var app = builder.Build();
 
+await app.AddMigrations();
+
 app.MapGrpcService<OperationGrpcService>();
 app.MapGrpcService<UserGrpcService>();
 app.MapGrpcService<NotificationGrpcService>();
