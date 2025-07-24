@@ -92,7 +92,7 @@ public class DialogService
             ActionType = ActionType.Update,
             DialogObject = DialogObject.Reminder
         };
-        await _botClient.SendMessage(chatId, "\"Введите id операции", cancellationToken: ct);
+        await _botClient.SendMessage(chatId, "Введите id операции", cancellationToken: ct);
     }
     
     /// <summary>
@@ -108,7 +108,7 @@ public class DialogService
             ActionType = ActionType.Delete,
             DialogObject = DialogObject.Reminder
         };
-        await _botClient.SendMessage(chatId, "\"Введите id операции", cancellationToken: ct);
+        await _botClient.SendMessage(chatId, "Введите id операции", cancellationToken: ct);
     }
     /// <summary>
     /// Обрабатывает шаг диалога.
