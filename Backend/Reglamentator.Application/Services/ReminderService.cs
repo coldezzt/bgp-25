@@ -8,6 +8,18 @@ using Reglamentator.Domain.Interfaces;
 
 namespace Reglamentator.Application.Services;
 
+/// <summary>
+/// Реализация <see cref="IReminderService"/> сервиса для управления напоминаниями пользователей.
+/// </summary>
+/// <remarks>
+/// Использует:
+/// <list type="bullet">
+///   <item><see cref="ITelegramUserRepository"/> для доступа к данным <see cref="TelegramUser"/>.</item>
+///   <item><see cref="IOperationRepository"/> для доступа к данным <see cref="Operation"/></item>
+///   <item><see cref="IReminderRepository"/> для доступа к данным <see cref="Reminder"/></item>
+///   <item><see cref="IHangfireOperationJobHelper"/> для управления задачами операций в Hangfire.</item>
+/// </list>
+/// </remarks>
 public class ReminderService(
     ITelegramUserRepository telegramUserRepository,
     IOperationRepository operationRepository,
@@ -15,6 +27,7 @@ public class ReminderService(
     IHangfireReminderJobHelper hangfireReminderJobHelper
     ): IReminderService
 {
+    /// <inheritdoc/>
     public async Task<Result<Reminder>> AddReminderAsync(
         long telegramId, 
         long operationId, 
@@ -41,6 +54,7 @@ public class ReminderService(
         return Result.Ok(reminder);
     }
 
+    /// <inheritdoc/>
     public async Task<Result<Reminder>> UpdateReminderAsync(
         long telegramId, 
         long operationId, 
@@ -73,6 +87,7 @@ public class ReminderService(
         return Result.Ok(reminder);
     }
 
+    /// <inheritdoc/>
     public async Task<Result<Reminder>> DeleteReminderAsync(
         long telegramId, 
         long operationId, 
@@ -104,6 +119,12 @@ public class ReminderService(
         return Result.Ok(reminder);
     }
 
+    /// <summary>
+    /// Создает новый экземпляр напоминания на основе DTO.
+    /// </summary>
+    /// <param name="operationId">Идентификатор операции.</param>
+    /// <param name="reminderDto">Данные напоминания.</param>
+    /// <returns>Новый экземпляр напоминания.</returns>
     private Reminder CreateNewReminder(long operationId, CreateReminderDto reminderDto) =>
         new()
         {
@@ -112,6 +133,11 @@ public class ReminderService(
             OperationId = operationId,
         };
 
+    /// <summary>
+    /// Обновляет существующее напоминание данными из DTO.
+    /// </summary>
+    /// <param name="reminder">Напоминание для обновления.</param>
+    /// <param name="reminderDto">Данные для обновления.</param>
     private void UpdateReminderByDto(Reminder reminder, UpdateReminderDto reminderDto)
     {
         reminder.MessageTemplate = reminderDto.MessageTemplate;

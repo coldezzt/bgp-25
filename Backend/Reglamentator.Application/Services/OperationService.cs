@@ -9,6 +9,18 @@ using Reglamentator.Domain.Interfaces;
 
 namespace Reglamentator.Application.Services;
 
+/// <summary>
+/// Реализация <see cref="IOperationService"/> сервиса для управления операциями пользователей.
+/// </summary>
+/// <remarks>
+/// Использует:
+/// <list type="bullet">
+///   <item><see cref="ITelegramUserRepository"/> для доступа к данным <see cref="TelegramUser"/>.</item>
+///   <item><see cref="IOperationRepository"/> для доступа к данным <see cref="Operation"/></item>
+///   <item><see cref="IOperationInstanceRepository"/> для доступа к данным <see cref="OperationInstance"/></item>
+///   <item><see cref="IHangfireOperationJobHelper"/> для управления задачами операций в Hangfire.</item>
+/// </list>
+/// </remarks>
 public class OperationService(
     ITelegramUserRepository telegramUserRepository,
     IOperationRepository operationRepository,
@@ -16,6 +28,7 @@ public class OperationService(
     IHangfireOperationJobHelper hangfireOperationJobHelper
     ): IOperationService
 {
+    /// <inheritdoc/>
     public async Task<Result<List<OperationInstance>>> GetPlanedOperationsAsync(
         long telegramId, 
         TimeRange range, 
@@ -30,6 +43,7 @@ public class OperationService(
         return Result.Ok(planedOperations);
     }
 
+    /// <inheritdoc/>
     public async Task<Result<List<OperationInstance>>> GetOperationHistoryAsync(
         long telegramId, 
         CancellationToken cancellationToken = default)
@@ -43,6 +57,7 @@ public class OperationService(
         return Result.Ok(history);
     }
 
+    /// <inheritdoc/>
     public async Task<Result<Operation>> GetOperationAsync(long telegramId, long operationId, CancellationToken cancellationToken = default)
     {
         if (!await telegramUserRepository.IsExistAsync(telegramId, cancellationToken))
@@ -60,6 +75,7 @@ public class OperationService(
         return Result.Ok(operation);
     }
 
+    /// <inheritdoc/>
     public async Task<Result<Operation>> CreateOperationAsync(
         long telegramId, 
         CreateOperationDto operationDto, 
@@ -80,6 +96,7 @@ public class OperationService(
         return Result.Ok(operation);
     }
 
+    /// <inheritdoc/>
     public async Task<Result<Operation>> UpdateOperationAsync(
         long telegramId, 
         UpdateOperationDto operationDto, 
@@ -109,6 +126,7 @@ public class OperationService(
         return Result.Ok(operation);
     }
 
+    /// <inheritdoc/>
     public async Task<Result<Operation>> DeleteOperationAsync(
         long telegramId, 
         long operationId, 
@@ -133,6 +151,12 @@ public class OperationService(
         return Result.Ok(operation);
     }
 
+    /// <summary>
+    /// Создает новую операцию на основе DTO.
+    /// </summary>
+    /// <param name="telegramId">Идентификатор пользователя.</param>
+    /// <param name="operationDto">Данные операции.</param>
+    /// <returns>Новый экземпляр операции.</returns>
     private Operation CreateNewOperation(long telegramId, CreateOperationDto operationDto)
     {
         var now = DateTime.UtcNow;
@@ -166,6 +190,11 @@ public class OperationService(
         return operation;
     }
     
+    /// <summary>
+    /// Обновляет существующую операцию на основе DTO.
+    /// </summary>
+    /// <param name="operation">Операция для обновления.</param>
+    /// <param name="operationDto">Данные для обновления.</param>
     private void UpdateOperation(Operation operation, UpdateOperationDto operationDto)
     {
         var now = DateTime.UtcNow;
@@ -187,6 +216,11 @@ public class OperationService(
         ProcessCronOperationUpdate(operation);
     }
     
+    /// <summary>
+    /// Закрывает выполнение операции с истекшей датой начала.
+    /// </summary>
+    /// <param name="operationInstance">Экземпляр операции.</param>
+    /// <param name="operationDto">Данные операции.</param>
     private void ProcessPastOperation(OperationInstance operationInstance, CreateOperationDto operationDto)
     {
         operationInstance.ScheduledAt = operationDto.StartDate;
@@ -194,6 +228,11 @@ public class OperationService(
         operationInstance.ExecutedAt = operationDto.StartDate;
     }
     
+    /// <summary>
+    /// Закрывает выполнение операции с истекшей датой начала при обновлении.
+    /// </summary>
+    /// <param name="operationInstance">Экземпляр операции.</param>
+    /// <param name="operationDto">Данные операции.</param>
     private void ProcessPastOperation(OperationInstance? operationInstance, UpdateOperationDto operationDto)
     {
         if (operationInstance == null)
@@ -204,6 +243,10 @@ public class OperationService(
         operationInstance.ExecutedAt = operationDto.StartDate;
     }
 
+    /// <summary>
+    /// Создает следующее выполнение для периодической операции.
+    /// </summary>
+    /// <param name="operation">Операция для обработки.</param>
     private void ProcessCronOperationCreation(Operation operation)
     {
         var now = DateTime.UtcNow;
@@ -220,6 +263,10 @@ public class OperationService(
         operation.History.Add(newOperationInstance);
     }
     
+    /// <summary>
+    /// Обновляет следующее выполнение для периодической операции.
+    /// </summary>
+    /// <param name="operation">Операция для обработки.</param>
     private void ProcessCronOperationUpdate(Operation operation)
     {
         var now = DateTime.UtcNow;
@@ -236,6 +283,11 @@ public class OperationService(
         operation.NextOperationInstance = newOperationInstance;
     }
 
+    /// <summary>
+    /// Получает следующую дату выполнения для периодической операции.
+    /// </summary>
+    /// <param name="operation">Операция для расчета.</param>
+    /// <returns>Дата следующего выполнения.</returns>
     private DateTime GetNextOccurrence(Operation operation)
     {
         var cronExpression = CrontabSchedule.Parse(

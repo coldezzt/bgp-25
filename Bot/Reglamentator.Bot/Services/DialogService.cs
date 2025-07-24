@@ -280,12 +280,12 @@ public class DialogService
         state.Step = DialogStep.AskDate;
         if (state.ActionType == ActionType.Create)
         {
-            await _botClient.SendMessage(chatId, "Введите дату (гггг-мм-дд):", cancellationToken: ct);
+            await _botClient.SendMessage(chatId, "Введите дату (гггг-мм-дд-чч-мм):", cancellationToken: ct);
         }
         else if (state.ActionType == ActionType.Update)
         {
             await SendCurrentOperationState(chatId, ct);
-            await _botClient.SendMessage(chatId, "Введите новую дату (гггг-мм-дд) (или оставьте текущую):", cancellationToken: ct);
+            await _botClient.SendMessage(chatId, "Введите новую дату (гггг-мм-дд-чч-мм) (или оставьте текущую):", cancellationToken: ct);
         }
     }
     private async Task HandleThemeStep(Message message, DialogState state, long chatId, CancellationToken ct)
@@ -321,7 +321,7 @@ public class DialogService
         }
         else
         {
-            await _botClient.SendMessage(chatId, "Некорректная дата. Введите в формате гггг-мм-дд:", cancellationToken: ct);
+            await _botClient.SendMessage(chatId, "Некорректная дата. Введите в формате гггг-мм-дд-чч-мм:", cancellationToken: ct);
         }
     }
 
