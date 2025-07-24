@@ -13,7 +13,7 @@ public class TelegramBotService
 {
     private static readonly string InfoMessage = File.ReadAllText("Resources/infoMessage.md");
     private readonly ITelegramBotClient _botClient;
-    private readonly Operation.OperationClient _grpcClient;
+    private readonly Operation.OperationClient _operationClient;
     private readonly Reminder.ReminderClient _reminderClient;
     private readonly User.UserClient _userClient;
     private readonly DialogService _dialogService;
@@ -29,10 +29,10 @@ public class TelegramBotService
         Reminder.ReminderClient reminderClient, User.UserClient userClient)
     {
         _botClient = botClient;
-        _grpcClient = operationClient;
+        _operationClient = operationClient;
         _reminderClient = reminderClient;
         _userClient = userClient;
-        _dialogService = new DialogService(_botClient, _grpcClient);
+        _dialogService = new DialogService(_botClient, _operationClient, reminderClient);
     }
 
     /// <summary>
@@ -125,7 +125,7 @@ public class TelegramBotService
                 await HandleFilteredListCommand(chatId, "month", ct);
                 return true;
             case "/edit":
-                await _dialogService.StartEditDialog(chatId,text, ct);
+                await _dialogService.StartEditDialog(chatId, ct);
                 return true;
             default:
                 return false;
@@ -152,7 +152,7 @@ public class TelegramBotService
                 await HandleFilteredListCommand(chatId, "month", ct);
                 return true;
             case "✏️ Изменить":
-                await _dialogService.StartEditDialog(chatId, text, ct);
+                await _dialogService.StartEditDialog(chatId, ct);
                 return true;
             case "❌ Удалить":
                 await HandleDeleteCommand(chatId, text, ct);
@@ -193,7 +193,7 @@ public class TelegramBotService
                 TelegramId = chatId,
                 OperationId = id
             };
-            await _grpcClient.DeleteOperationAsync(request);
+            await _operationClient.DeleteOperationAsync(request);
             await SendMessage(chatId, $"✅ Задача {id} удалена.", null, ct);
         }
         catch
@@ -205,7 +205,7 @@ public class TelegramBotService
     private async Task HandleListCommand(long chatId, CancellationToken ct)
     {
         var request = new PlanedOperationsRequest { TelegramId = chatId, Range = TimeRange.Month };
-        var response = await _grpcClient.GetPlanedOperationsAsync(request);
+        var response = await _operationClient.GetPlanedOperationsAsync(request);
         
         if (response.Instances.Count == 0)
         {
@@ -237,7 +237,7 @@ public class TelegramBotService
             }
         };
 
-        var response = await _grpcClient.GetPlanedOperationsAsync(request);
+        var response = await _operationClient.GetPlanedOperationsAsync(request);
 
         if (response.Instances.Count == 0)
         {

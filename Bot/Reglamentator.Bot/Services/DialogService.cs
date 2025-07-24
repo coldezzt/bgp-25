@@ -13,18 +13,22 @@ namespace Reglamentator.Bot.Services;
 public class DialogService
 {
     private readonly ITelegramBotClient _botClient;
-    private readonly Operation.OperationClient _grpcClient;
+    private readonly Operation.OperationClient _operationClient;
+    private readonly Reminder.ReminderClient _reminderClient;
     private readonly ConcurrentDictionary<long, DialogState> _userDialogs = new();
 
     /// <summary>
     /// Инициализирует новый экземпляр DialogService.
     /// </summary>
     /// <param name="botClient">Клиент Telegram бота.</param>
-    /// <param name="grpcClient">Клиент gRPC для взаимодействия с API.</param>
-    public DialogService(ITelegramBotClient botClient, Operation.OperationClient grpcClient)
+    /// <param name="operationClient">Клиент gRPC для взаимодействия с API операции.</param>
+    /// <param name="reminderClient">Клиент gRPC для взаимодействия с API напоминаний</param>
+    public DialogService(ITelegramBotClient botClient, Operation.OperationClient operationClient, 
+        Reminder.ReminderClient reminderClient)
     {
         _botClient = botClient;
-        _grpcClient = grpcClient;
+        _operationClient = operationClient;
+        _reminderClient = reminderClient;
     }
 
     /// <summary>
@@ -44,7 +48,7 @@ public class DialogService
     /// <param name="chatId">ID чата пользователя</param>
     /// <param name="text">Текст сообщения</param>
     /// <param name="ct">Токен отмены</param>
-    public async Task StartEditDialog(long chatId, string text, CancellationToken ct = default)
+    public async Task StartEditDialog(long chatId, CancellationToken ct = default)
     {
         _userDialogs[chatId] = new DialogState { Step = DialogStep.AskOperationId };
         await _botClient.SendMessage(chatId, "Введите id задачи:", cancellationToken: ct);
@@ -91,6 +95,15 @@ public class DialogService
             case DialogStep.AskTimeRange:
                 await HandleTimeRangeStep(message, state, chatId, ct);
                 break;
+            case DialogStep.AskAddReminder:
+                await HandleAddReminderStep(message, state, chatId, ct);
+                break;
+            case DialogStep.AskReminderMessage:
+                await HandleReminderMessageStep(message, state, chatId, ct);
+                break;
+            case DialogStep.AskReminderTime:
+                await HandleReminderTimeStep(message, state, chatId, ct);
+                break;
         }
         return true;
     }
@@ -113,12 +126,12 @@ public class DialogService
 
     private async Task HandleOperationIdStep(Message message, DialogState state, long chatId, CancellationToken ct)
     {
-        if ( !int.TryParse(message.Text, out int operationId))
+        if ( !long.TryParse(message.Text, out long operationId))
         {
             await _botClient.SendMessage(chatId, "Используйте правильный формат id", cancellationToken: ct);
             return;
         }
-        var operation = await _grpcClient.GetOperationAsync(new GetOperationRequest {OperationId = operationId, TelegramId = chatId});
+        var operation = await _operationClient.GetOperationAsync(new GetOperationRequest {OperationId = operationId, TelegramId = chatId});
         if (!operation.Status.IsSuccess)
         {
             await _botClient.SendMessage(chatId, "Не удалось получить операцию, возможно она не существует", cancellationToken: ct);
@@ -229,6 +242,80 @@ public class DialogService
             replyMarkup: keyboard,
             cancellationToken: ct);
     }
+    
+    private async Task HandleAddReminderStep(Message message, DialogState state, long chatId, CancellationToken ct)
+    {
+        if (message.Text?.Equals("Да", StringComparison.OrdinalIgnoreCase) ?? false)
+        {
+            state.Step = DialogStep.AskReminderMessage;
+            await _botClient.SendMessage(chatId, "Введите текст напоминания:", cancellationToken: ct);
+        }
+        else
+        {
+            await CompleteDialog(chatId, "✅ Задача сохранена. Напоминание не добавлено.", ct);
+        }
+    }
+    private async Task HandleReminderMessageStep(Message message, DialogState state, long chatId, CancellationToken ct)
+    {
+        state.ReminderMessage = message.Text;
+        state.Step = DialogStep.AskReminderTime;
+        
+        var keyboard = new ReplyKeyboardMarkup(new[]
+        {
+            new[] { new KeyboardButton(TimeRange.Min15.ToString()) },
+            new[] { new KeyboardButton(TimeRange.Hour.ToString()) },
+            new[] { new KeyboardButton(TimeRange.Day.ToString()) }
+        })
+        {
+            ResizeKeyboard = true,
+            OneTimeKeyboard = true
+        };
+
+        await _botClient.SendMessage(
+            chatId,
+            "За сколько времени напомнить?",
+            replyMarkup: keyboard,
+            cancellationToken: ct);
+    }
+    
+    private async Task HandleReminderTimeStep(Message message, DialogState state, long chatId, CancellationToken ct)
+    {
+        if (Enum.TryParse<TimeRange>(message.Text, out var timeRange))
+        {
+            var request = new AddReminderRequest
+            {
+                TelegramId = chatId,
+                OperationId = state.OperationId,
+                Reminder = new CreateReminderDto
+                {
+                    MessageTemplate = state.ReminderMessage,
+                    OffsetBeforeExecution = timeRange
+                }
+            };
+
+            var response = await _reminderClient.AddReminderAsync(request, cancellationToken: ct);
+            
+            if (response.Status.IsSuccess)
+            {
+                await CompleteDialog(chatId, 
+                    $"✅ Напоминание добавлено: \"{state.ReminderMessage}\" (за {timeRange} до)", 
+                    ct);
+            }
+            else
+            {
+                await CompleteDialog(chatId, 
+                    "❌ Не удалось добавить напоминание. Задача сохранена.", 
+                    ct);
+            }
+        }
+        else
+        {
+            await _botClient.SendMessage(chatId, 
+                "Неверный выбор. Пожалуйста, выберите время из предложенных вариантов.", 
+                cancellationToken: ct);
+        }
+    }
+
 
     private async Task CreateOperationAndCompleteDialog(DialogState state, long chatId, CancellationToken ct)
     {
@@ -244,18 +331,30 @@ public class DialogService
             }
         };
         
-        var result = await _grpcClient.CreateOperationAsync(request, cancellationToken: ct);
+        var result = await _operationClient.CreateOperationAsync(request, cancellationToken: ct);
         if (!result.Status.IsSuccess)
         {
-            await _botClient.SendMessage(chatId, "Не удалось создать операцию", cancellationToken: ct);
+            await CompleteDialog(chatId, "❌ Не удалось создать задачу", ct);
             return;
         }
+        state.OperationId = result.Operation.Id;
+        state.Step = DialogStep.AskAddReminder;
+        
+        var keyboard = new ReplyKeyboardMarkup(new[]
+        {
+            new[] { new KeyboardButton("Да") },
+            new[] { new KeyboardButton("Нет") }
+        })
+        {
+            ResizeKeyboard = true,
+            OneTimeKeyboard = true
+        };
+
         await _botClient.SendMessage(
-            chatId, 
-            $"✅ Задача создана!{(state.Cron != TimeRange.None ? $" Периодичность: {state.Cron}" : "")}", 
-            replyMarkup: new ReplyKeyboardRemove(),
+            chatId,
+            "✅ Задача создана! Хотите добавить напоминание?",
+            replyMarkup: keyboard,
             cancellationToken: ct);
-        _userDialogs.TryRemove(chatId, out _);
     }
     
     private async Task UpdateOperationAndCompleteDialog(DialogState state, long chatId, CancellationToken ct)
@@ -273,10 +372,10 @@ public class DialogService
             }
         };
         
-        var result = await _grpcClient.UpdateOperationAsync(request, cancellationToken: ct);
+        var result = await _operationClient.UpdateOperationAsync(request, cancellationToken: ct);
         if (!result.Status.IsSuccess)
         {
-            await _botClient.SendMessage(chatId, "Не удалось обновить операцию", cancellationToken: ct);
+            await CompleteDialog(chatId, "❌ Не удалось обновить задачу", ct);
             return;
         }
         await _botClient.SendMessage(
@@ -284,6 +383,16 @@ public class DialogService
             $"✅ Задача обновлена!{(state.Cron != TimeRange.None ? $" Периодичность: {state.Cron}" : "")}", 
             replyMarkup: new ReplyKeyboardRemove(),
             cancellationToken: ct);
+        _userDialogs.TryRemove(chatId, out _);
+    }
+    private async Task CompleteDialog(long chatId, string message, CancellationToken ct)
+    {
+        await _botClient.SendMessage(
+            chatId, 
+            message,
+            replyMarkup: new ReplyKeyboardRemove(),
+            cancellationToken: ct);
+            
         _userDialogs.TryRemove(chatId, out _);
     }
     private class DialogState
@@ -295,6 +404,7 @@ public class DialogService
         public string? Description { get; set; }
         public DateTime Date { get; set; }
         public TimeRange Cron { get; set; }
+        public string? ReminderMessage { get; set; }
     }
 
     private enum DialogStep
@@ -303,7 +413,10 @@ public class DialogService
         AskTheme,
         AskDescription,
         AskDate,
-        AskTimeRange
+        AskTimeRange,
+        AskAddReminder,
+        AskReminderMessage,
+        AskReminderTime
     }
 
     private enum OperationType
