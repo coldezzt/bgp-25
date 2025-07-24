@@ -2,6 +2,9 @@ using Reglamentator.Domain.Entities;
 
 namespace Reglamentator.Application.Dtos;
 
+/// <summary>
+/// DTO для обновления напоминания.
+/// </summary>
 public class UpdateOperationDto
 {
     public long Id { get; set; }

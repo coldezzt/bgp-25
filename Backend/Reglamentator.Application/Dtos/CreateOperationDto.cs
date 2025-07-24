@@ -2,6 +2,9 @@ using Reglamentator.Domain.Entities;
 
 namespace Reglamentator.Application.Dtos;
 
+/// <summary>
+/// DTO для создания новой операции.
+/// </summary>
 public class CreateOperationDto
 {
     public string Theme { get; set; } = null!;

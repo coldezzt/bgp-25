@@ -7,10 +7,18 @@ using Reglamentator.Domain.Interfaces;
 
 namespace Reglamentator.Application.Services;
 
+/// <summary>
+/// Реализация <see cref="IUserService"/> для работы с пользователями Telegram.
+/// </summary>
+/// <remarks>
+/// Использует <see cref="ITelegramUserRepository"/> для доступа к данным <see cref="TelegramUser"/>.
+/// </remarks>
 public class UserService(
     ITelegramUserRepository userRepository
     ): IUserService
 {
+    
+    /// <inheritdoc/>
     public async Task<Result<TelegramUser>> CreateUserAsync(
         CreateUserDto userDto, 
         CancellationToken cancellationToken = default)
@@ -28,6 +36,11 @@ public class UserService(
         return Result.Ok(user);
     }
 
+    /// <summary>
+    /// Создает новый экземпляр TelegramUser из DTO.
+    /// </summary>
+    /// <param name="userDto">Данные пользователя.</param>
+    /// <returns>Новый пользователь.</returns>
     private TelegramUser CreateNewUser(CreateUserDto userDto) =>
         new()
         {
