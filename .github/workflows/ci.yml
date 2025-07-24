@@ -60,7 +60,7 @@ jobs:
           name: bot
           path: ./publish/bot
 
-      - name: Upload bot artifact
+      - name: Upload backend artifact
         if: needs.check-changes.outputs.backend_changed == 'true'
         uses: actions/upload-artifact@v4
         with:
