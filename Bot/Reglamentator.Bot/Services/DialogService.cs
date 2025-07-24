@@ -205,6 +205,7 @@ public class DialogService
         state.ReminderCron = reminder.OffsetBeforeExecution;
         state.ReminderMessage = reminder.MessageTemplate;
         state.Step = DialogStep.AskReminderMessage;
+        await SendCurrentReminderState(chatId, ct);
         await _botClient.SendMessage(chatId, "Введите сообщение нового напоминания", cancellationToken: ct);
     }
     private async Task SendCurrentOperationState(long chatId, CancellationToken ct)
