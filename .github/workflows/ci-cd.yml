@@ -47,11 +47,11 @@ jobs:
       
       - name: Publish Bot
         if: needs.check-changes.outputs.bot_changes == 'true'
-        run: dotnet publish Bot/Reglamentator.Bot/Reglamentator.Bot.csproj -c Release -o ./publish/bot
+        run: dotnet publish Bot/Reglamentator.Bot/Reglamentator.Bot.csproj -c Release -o ./bot
       
       - name: Publish Backend
         if: needs.check-changes.outputs.backend_changed == 'true'
-        run: dotnet publish Backend/Reglamentator.WebAPI/Reglamentator.WebAPI.csproj -c Release -o ./publish/backend
+        run: dotnet publish Backend/Reglamentator.WebAPI/Reglamentator.WebAPI.csproj -c Release -o ./backend
       
       - name: Upload bot artifact
         if: needs.check-changes.outputs.bot_changes == 'true'
