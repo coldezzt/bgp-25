@@ -25,4 +25,10 @@
     <ItemGroup>
       <ProjectReference Include="..\..\Backend\Reglamentator.WebAPI\Reglamentator.WebAPI.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+        <None Update="Resources\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 </Project>

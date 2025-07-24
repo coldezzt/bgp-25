@@ -9,6 +9,8 @@ public static class GrpcExtensions
         var channel = GrpcChannel.ForAddress(grpcUrl);
         services.AddSingleton(new Operation.OperationClient(channel));
         services.AddSingleton(new Notification.NotificationClient(channel));
+        services.AddSingleton(new Reminder.ReminderClient(channel));
+        services.AddSingleton(new User.UserClient(channel));
         return services;
     }
 }

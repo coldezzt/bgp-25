@@ -1,31 +1,37 @@
 using Telegram.Bot;
-using Telegram.Bot.Types;
 using Telegram.Bot.Polling;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using Reglamentator.Bot;
-using Grpc.Net.Client;
-using Reglamentator.Bot.Services;
+
+namespace Reglamentator.Bot.Services;
 
 /// <summary>
 /// Основной сервис Telegram-бота, реализующий обработку команд, диалогов и работу с gRPC backend.
 /// </summary>
 public class TelegramBotService
 {
+    private static readonly string InfoMessage = File.ReadAllText("Resources/infoMessage.md");
     private readonly ITelegramBotClient _botClient;
     private readonly Operation.OperationClient _grpcClient;
-    private readonly Dictionary<long, string> _userStates = new();
+    private readonly Reminder.ReminderClient _reminderClient;
+    private readonly User.UserClient _userClient;
     private readonly DialogService _dialogService;
 
     /// <summary>
     /// Создаёт экземпляр TelegramBotService.
     /// </summary>
     /// <param name="botClient">Клиент Telegram-бота</param>
-    /// <param name="grpcClient">gRPC клиент</param>
-    public TelegramBotService(ITelegramBotClient botClient, Operation.OperationClient grpcClient)
+    /// <param name="operationClient">gRPC клиент операций</param>
+    /// <param name="reminderClient">gRPC клиент напоминаний</param>
+    /// <param name="userClient">gRPC клиент пользователей</param>
+    public TelegramBotService(ITelegramBotClient botClient, Operation.OperationClient operationClient,
+        Reminder.ReminderClient reminderClient, User.UserClient userClient)
     {
         _botClient = botClient;
-        _grpcClient = grpcClient;
+        _grpcClient = operationClient;
+        _reminderClient = reminderClient;
+        _userClient = userClient;
         _dialogService = new DialogService(_botClient, _grpcClient);
     }
 
@@ -35,7 +41,7 @@ public class TelegramBotService
     /// <param name="cancellationToken">Токен отмены</param>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        var receiverOptions = new ReceiverOptions { AllowedUpdates = { } };
+        var receiverOptions = new ReceiverOptions();
         _botClient.StartReceiving(
             HandleUpdateAsync,
             HandleErrorAsync,
@@ -57,99 +63,118 @@ public class TelegramBotService
     private async Task HandleMessage(Message message, CancellationToken ct)
     {
         var chatId = message.Chat.Id;
-        var text = message.Text ?? "";
+        var text = message.Text?.Trim() ?? "";
 
-        if (text.StartsWith("/") || IsMainMenuButton(text))
-            _dialogService.CancelDialog(chatId);
-
-        if (text.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
-        {
-            _dialogService.CancelDialog(chatId);
-            await SendMessage(chatId, "Диалог отменён.", MainKeyboard, ct);
-            return;
-        }
-
-        if (_dialogService.HasActiveDialog(chatId))
-        {
-            if (await _dialogService.HandleDialogMessage(message, ct))
-                return;
-        }
-
-        if (text.StartsWith("/"))
-        {
-            var command = text.Split(' ')[0];
-            switch (command)
-            {
-                case "/start":
-                    await HandleStartCommand(chatId, ct);
-                    return;
-                case "/list":
-                    await HandleListCommand(chatId, ct);
-                    return;
-                case "/add":
-                    await _dialogService.StartAddDialog(chatId, ct);
-                    return;
-                case "/delete":
-                    await HandleDeleteCommand(chatId, text, ct);
-                    return;
-                case "/today":
-                    await HandleFilteredListCommand(chatId, "today", ct);
-                    return;
-                case "/week":
-                    await HandleFilteredListCommand(chatId, "week", ct);
-                    return;
-                case "/month":
-                    await HandleFilteredListCommand(chatId, "month", ct);
-                    return;
-                case "/edit":
-                    await HandleEditCommand(message, text, ct);
-                    return;
-            }
-        }
-        else
-        {
-            switch (text)
-            {
-                case "📋 Список задач":
-                    await HandleListCommand(chatId, ct);
-                    return;
-                case "➕ Добавить":
-                    await _dialogService.StartAddDialog(chatId, ct);
-                    return;
-                case "📅 Сегодня":
-                    await HandleFilteredListCommand(chatId, "today", ct);
-                    return;
-                case "🗓️ Неделя":
-                    await HandleFilteredListCommand(chatId, "week", ct);
-                    return;
-                case "📆 Месяц":
-                    await HandleFilteredListCommand(chatId, "month", ct);
-                    return;
-                case "✏️ Изменить":
-                    await SendMessage(chatId, "Введите: /edit <ID>", MainKeyboard, ct);
-                    return;
-                case "❌ Удалить":
-                    await SendMessage(chatId, "Введите: /delete <ID>", MainKeyboard, ct);
-                    return;
-                case "ℹ️ Инструкция":
-                    await SendInfoMessage(chatId, ct);
-                    return;
-            }
-        }
+        if (await TryHandleCancelCommand(chatId, text, ct)) return;
+        if (await TryHandleActiveDialog(chatId, message, ct)) return;
+        if (await TryHandleSlashCommand(chatId, text, ct)) return;
+        if (await TryHandleMainMenuButton(chatId, text, ct)) return;
 
         await SendMessage(chatId, "Неизвестная команда. Используйте /start", null, ct);
     }
-
-    private bool IsMainMenuButton(string text)
+    
+    private async Task<bool> TryHandleCancelCommand(long chatId, string text, CancellationToken ct)
     {
-        return text == "📋 Список задач" || text == "➕ Добавить" || text == "📅 Сегодня" ||
-               text == "🗓️ Неделя" || text == "📆 Месяц" || text == "✏️ Изменить" || text == "❌ Удалить";
+        if (!text.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
+            return false;
+        
+        _dialogService.CancelDialog(chatId);
+        await SendMessage(chatId, "Диалог отменён.", MainKeyboard, ct);
+        return true;
     }
+    
+    private async Task<bool> TryHandleActiveDialog(long chatId, Message message, CancellationToken ct)
+    {
+        if (!_dialogService.HasActiveDialog(chatId))
+            return false;
 
+        if (await _dialogService.HandleDialogMessage(message, ct))
+            return true;
+
+        await SendMessage(chatId, "Пожалуйста, завершите текущий диалог или введите /cancel для отмены.", null, ct);
+        return true;
+    }
+    
+    private async Task<bool> TryHandleSlashCommand(long chatId, string text, CancellationToken ct)
+    {
+        if (!text.StartsWith("/"))
+            return false;
+
+        var command = text.Split(' ')[0];
+        switch (command)
+        {
+            case "/start":
+                await HandleStartCommand(chatId, ct);
+                return true;
+            case "/list":
+                await HandleListCommand(chatId, ct);
+                return true;
+            case "/add":
+                await _dialogService.StartAddDialog(chatId, ct);
+                return true;
+            case "/delete":
+                await HandleDeleteCommand(chatId, text, ct);
+                return true;
+            case "/today":
+                await HandleFilteredListCommand(chatId, "today", ct);
+                return true;
+            case "/week":
+                await HandleFilteredListCommand(chatId, "week", ct);
+                return true;
+            case "/month":
+                await HandleFilteredListCommand(chatId, "month", ct);
+                return true;
+            case "/edit":
+                await _dialogService.StartEditDialog(chatId,text, ct);
+                return true;
+            default:
+                return false;
+        }
+    }
+    
+    private async Task<bool> TryHandleMainMenuButton(long chatId, string text,CancellationToken ct)
+    {
+        switch (text)
+        {
+            case "📋 Список задач":
+                await HandleListCommand(chatId, ct);
+                return true;
+            case "➕ Добавить":
+                await _dialogService.StartAddDialog(chatId, ct);
+                return true;
+            case "📅 Сегодня":
+                await HandleFilteredListCommand(chatId, "today", ct);
+                return true;
+            case "🗓️ Неделя":
+                await HandleFilteredListCommand(chatId, "week", ct);
+                return true;
+            case "📆 Месяц":
+                await HandleFilteredListCommand(chatId, "month", ct);
+                return true;
+            case "✏️ Изменить":
+                await _dialogService.StartEditDialog(chatId, text, ct);
+                return true;
+            case "❌ Удалить":
+                await HandleDeleteCommand(chatId, text, ct);
+                return true;
+            case "ℹ️ Инструкция":
+                await SendInfoMessage(chatId, ct);
+                return true;
+            default:
+                return false;
+        }
+    }
+    
     private async Task HandleStartCommand(long chatId, CancellationToken ct)
     {
-        _userStates.Remove(chatId);
-        await SendMessage(chatId, "Добро пожаловать! Выберите действие:", MainKeyboard, ct);
+        var result = await _userClient.CreateUserAsync(new CreateUserRequest{TelegramId = chatId});
+        if (result.Status.IsSuccess)
+        {
+            await SendMessage(chatId, "Добро пожаловать! Выберите действие:", MainKeyboard, ct);
+            return;
+        }
+
+        await _botClient.SendMessage(chatId, "Не удалось зарегистрироваться", cancellationToken: ct);
     }
 
     private async Task HandleDeleteCommand(long chatId, string text, CancellationToken ct)
@@ -175,45 +200,13 @@ public class TelegramBotService
         {
             await SendMessage(chatId, $"❌ Не удалось удалить задачу {id}.", null, ct);
         }
-    }
-
-    private async Task HandleEditCommand(Message message, string text, CancellationToken ct)
-    {
-        var chatId = message.Chat.Id;
-        var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 2 || !int.TryParse(parts[1], out int id))
-        {
-            await SendMessage(chatId, "Используйте: /edit <ID>", null, ct);
-            return;
-        }
-
-        try
-        {
-            var request = new UpdateOperationRequest
-            {
-                Operation = new UpdateOperationDto
-                {
-                    Id = id,
-                    Theme = "Обновленная задача",
-                    Description = "Обновленное описание",
-                    StartDate = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(
-                        DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc))
-                }
-            };
-            await _grpcClient.UpdateOperationAsync(request);
-            await SendMessage(chatId, $"✅ Задача {id} обновлена.", null, ct);
-        }
-        catch
-        {
-            await SendMessage(chatId, $"❌ Ошибка при обновлении задачи {id}.", null, ct);
-        }
-    }
-
+    }   
+    
     private async Task HandleListCommand(long chatId, CancellationToken ct)
     {
         var request = new PlanedOperationsRequest { TelegramId = chatId, Range = TimeRange.Month };
         var response = await _grpcClient.GetPlanedOperationsAsync(request);
-
+        
         if (response.Instances.Count == 0)
         {
             await SendMessage(chatId, "Нет задач.", null, ct);
@@ -284,15 +277,7 @@ public class TelegramBotService
 
     private async Task SendInfoMessage(long chatId, CancellationToken ct)
     {
-        string info = "ℹ️ <b>Инструкция по использованию бота:</b>\n\n" +
-                      "• <b>Добавить задачу</b>: нажмите \"➕ Добавить\" и следуйте диалогу.\n" +
-                      "• <b>Список задач</b>: нажмите \"📋 Список задач\".\n" +
-                      "• <b>Фильтры</b>: используйте кнопки \"Сегодня\", \"Неделя\", \"Месяц\".\n" +
-                      "• <b>Изменить/Удалить</b>: используйте кнопки \"✏️ Изменить\" или \"❌ Удалить\" и следуйте подсказкам.\n" +
-                      "• <b>Отмена диалога</b>: введите /cancel.\n\n" +
-                      "Бот поддерживает команды: /start, /list, /add, /delete, /edit, /today, /week, /month.\n" +
-                      "Если возникли вопросы — напишите /start для повторной инструкции.";
-        await SendMessage(chatId, info, MainKeyboard, ct);
+        await SendMessage(chatId, InfoMessage, MainKeyboard, ct);
     }
 
     private Task HandleErrorAsync(ITelegramBotClient bot, Exception exception, HandleErrorSource source, CancellationToken ct)
