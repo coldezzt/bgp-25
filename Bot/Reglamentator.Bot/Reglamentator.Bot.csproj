@@ -4,7 +4,6 @@
         <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <UserSecretsId>dotnet-Reglamentator.Bot-f00dadfc-bf84-4343-ba00-135679a50f0a</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>
