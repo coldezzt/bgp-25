@@ -104,30 +104,16 @@ jobs:
           username: ${{ secrets.BOT_SSH_USER }}
           key: ${{ secrets.BOT_SSH_KEY }}
           script: |
-            export TelegramBot__Token="${{ secrets.TELEGRAMBOT__TOKEN }}"
-            export Grpc__BackendUrl="${{ secrets.GRPC_BACKENDURL }}"
-            
-            if ! dotnet --list-runtimes | grep 'Microsoft.AspNetCore.App 8.0' > /dev/null; then
-              echo "Installing ASP.NET Core Runtime..."
-              wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
-              chmod +x dotnet-install.sh
-              ./dotnet-install.sh --runtime aspnetcore --channel 8.0 --install-dir $HOME/.dotnet
-              echo 'export DOTNET_ROOT=$HOME/.dotnet' >> ~/.bashrc
-              echo 'export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools' >> ~/.bashrc
-              export DOTNET_ROOT=$HOME/.dotnet
-              export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools
-            else
-              echo "ASP.NET Core Runtime 8.0 is already installed"
-            fi
-            
-            if [ -f /app/bot/pid.txt ]; then
-              kill -9 $(cat /app/bot/pid.txt) || true
-              rm /app/pid.txt
-            fi
-            
-            cd /app/bot
-            nohup $HOME/.dotnet/dotnet ./Reglamentator.Bot.dll > log.txt 2>&1 &
-            echo $! > pid.txt
+            docker rm -f reglamentator-bot || true
+
+            docker run -d \
+              --name reglamentator-bot \
+              -e TelegramBot__Token="${{ secrets.TELEGRAMBOT__TOKEN }}" \
+              -e Grpc__BackendUrl="${{ secrets.GRPC_BACKENDURL }}" \
+              -v /app/bot:/app \
+              -w /app \
+              mcr.microsoft.com/dotnet/aspnet:8.0 \
+              dotnet Reglamentator.Bot.dll
   
   publish-backend:
     runs-on: ubuntu-latest
@@ -166,29 +152,16 @@ jobs:
           username: ${{ secrets.BACKEND_SSH_USER }}
           key: ${{ secrets.BACKEND_SSH_KEY }}
           script: |
-            export Database__ConnectionString="${{ secrets.DATABASE__CONNECTIONSTRING }}"
-            export Database__HangfireConnectionString="${{ secrets.DATABASE__HANGFIRECONNECTIONSTRING }}"
-            export ASPNETCORE_ENVIRONMENT='Production'
-            
-            if ! dotnet --list-runtimes | grep 'Microsoft.AspNetCore.App 8.0' > /dev/null; then
-              echo "Installing ASP.NET Core Runtime..."
-              wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
-              chmod +x dotnet-install.sh
-              ./dotnet-install.sh --runtime aspnetcore --channel 8.0 --install-dir $HOME/.dotnet
-              echo 'export DOTNET_ROOT=$HOME/.dotnet' >> ~/.bashrc
-              echo 'export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools' >> ~/.bashrc
-              export DOTNET_ROOT=$HOME/.dotnet
-              export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools
-            else
-              echo "ASP.NET Core Runtime 8.0 is already installed"
-            fi
-            
-            if [ -f /app/pid.txt ]; then
-              kill -9 $(cat /app/pid.txt) || true
-              rm /app/backend/pid.txt
-            fi
-            
-            cd /app/backend
-            nohup $HOME/.dotnet/dotnet ./Reglamentator.Backend.dll > log.txt 2>&1 &
-            echo $! > pid.txt
+            docker rm -f reglamentator-backend || true
+
+            docker run -d \
+              --name reglamentator-backend \
+              -e Database__ConnectionString="${{ secrets.DATABASE__CONNECTIONSTRING }}" \
+              -e Database__HangfireConnectionString="${{ secrets.DATABASE__HANGFIRECONNECTIONSTRING }}" \
+              -e ASPNETCORE_ENVIRONMENT="Production" \
+              -v /app/backend:/app \
+              -w /app \
+              -p 5000:5000 \
+              mcr.microsoft.com/dotnet/aspnet:8.0 \
+              dotnet Reglamentator.WebAPI.dll
 
