@@ -144,7 +144,7 @@ jobs:
           source: "./backend"
           target: "/app"
 
-      - name: Restart Backend service without Docker
+      - name: Restart Backend service
         if: steps.check.outputs.found == 'true'
         uses: appleboy/ssh-action@master
         with:
@@ -153,7 +153,8 @@ jobs:
           key: ${{ secrets.BACKEND_SSH_KEY }}
           script: |
             docker rm -f reglamentator-backend || true
-
+            echo ${{ secrets.DATABASE__CONNECTIONSTRING }}
+            echo ${{ secrets.DATABASE__HANGFIRECONNECTIONSTRING }}
             docker run -d \
               --name reglamentator-backend \
               -e Database__ConnectionString="${{ secrets.DATABASE__CONNECTIONSTRING }}" \
