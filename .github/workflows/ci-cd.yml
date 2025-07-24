@@ -58,14 +58,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bot
-          path: ./publish/bot
+          path: ./bot
 
       - name: Upload backend artifact
         if: needs.check-changes.outputs.backend_changed == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: backend
-          path: ./publish/backend
+          path: ./backend
 
   publish-bot:
     runs-on: ubuntu-latest
@@ -76,11 +76,11 @@ jobs:
         continue-on-error: true
         with:
           name: bot
-          path: ./publish/bot
+          path: ./bot
           
       - name: Check if bot artifact exists
         id: check
-        run: echo "found=$([[ -d ./publish/bot ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+        run: echo "found=$([[ -d ./bot ]] && echo true || echo false)" >> $GITHUB_OUTPUT
 
       - name: Stop if no bot artifact
         if: steps.check.outputs.found == 'false'
@@ -93,8 +93,8 @@ jobs:
           host: ${{ secrets.BOT_HOST }}
           username: ${{ secrets.BOT_SSH_USER }}
           key: ${{ secrets.BOT_SSH_KEY }}
-          source: "./publish/bot"
-          target: "/app/bot"
+          source: "./bot"
+          target: "/app"
 
       - name: Restart Bot service
         if: steps.check.outputs.found == 'true'
@@ -105,9 +105,28 @@ jobs:
           key: ${{ secrets.BOT_SSH_KEY }}
           script: |
             export TELEGRAM_TOKEN='${{ secrets.TELEGRAM_TOKEN }}'
+            
+            if ! dotnet --list-runtimes | grep 'Microsoft.AspNetCore.App 8.0' > /dev/null; then
+              echo "Installing ASP.NET Core Runtime..."
+              wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+              chmod +x dotnet-install.sh
+              ./dotnet-install.sh --runtime aspnetcore --channel 8.0 --install-dir $HOME/.dotnet
+              echo 'export DOTNET_ROOT=$HOME/.dotnet' >> ~/.bashrc
+              echo 'export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools' >> ~/.bashrc
+              export DOTNET_ROOT=$HOME/.dotnet
+              export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools
+            else
+              echo "ASP.NET Core Runtime 8.0 is already installed"
+            fi
+            
+            if [ -f /app/bot/pid.txt ]; then
+              kill -9 $(cat /app/bot/pid.txt) || true
+              rm /app/pid.txt
+            fi
+            
             cd /app/bot
-            docker compose -f docker-compose.bot.yml down
-            docker compose -f docker-compose.bot.yml up -d --build
+            nohup $HOME/.dotnet/dotnet ./Reglamentator.Bot.dll > log.txt 2>&1 &
+            echo $! > pid.txt
   
   publish-backend:
     runs-on: ubuntu-latest
@@ -118,11 +137,11 @@ jobs:
         continue-on-error: true
         with:
           name: backend
-          path: ./publish/backend
+          path: ./backend
     
       - name: Check if backend artifact exists
         id: check
-        run: echo "found=$([[ -d ./publish/backend ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+        run: echo "found=$([[ -d ./backend ]] && echo true || echo false)" >> $GITHUB_OUTPUT
 
       - name: Stop if no backend artifact
         if: steps.check.outputs.found == 'false'
@@ -135,10 +154,10 @@ jobs:
           host: ${{ secrets.BACKEND_HOST }}
           username: ${{ secrets.BACKEND_SSH_USER }}
           key: ${{ secrets.BACKEND_SSH_KEY }}
-          source: "./publish/backend"
-          target: "/app/backend"
+          source: "./backend"
+          target: "/app"
 
-      - name: Restart Backend service
+      - name: Restart Backend service without Docker
         if: steps.check.outputs.found == 'true'
         uses: appleboy/ssh-action@master
         with:
@@ -147,6 +166,26 @@ jobs:
           key: ${{ secrets.BACKEND_SSH_KEY }}
           script: |
             export DEFAULT_CONNECTION_STRING='${{ secrets.DEFAULT_CONNECTION_STRING }}'
+            
+            if ! dotnet --list-runtimes | grep 'Microsoft.AspNetCore.App 8.0' > /dev/null; then
+              echo "Installing ASP.NET Core Runtime..."
+              wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+              chmod +x dotnet-install.sh
+              ./dotnet-install.sh --runtime aspnetcore --channel 8.0 --install-dir $HOME/.dotnet
+              echo 'export DOTNET_ROOT=$HOME/.dotnet' >> ~/.bashrc
+              echo 'export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools' >> ~/.bashrc
+              export DOTNET_ROOT=$HOME/.dotnet
+              export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools
+            else
+              echo "ASP.NET Core Runtime 8.0 is already installed"
+            fi
+            
+            if [ -f /app/pid.txt ]; then
+              kill -9 $(cat /app/pid.txt) || true
+              rm /app/backend/pid.txt
+            fi
+            
             cd /app/backend
-            docker compose -f docker-compose.backend.yml down
-            docker compose -f docker-compose.backend.yml up -d --build
+            nohup $HOME/.dotnet/dotnet ./Reglamentator.Backend.dll > log.txt 2>&1 &
+            echo $! > pid.txt
+
