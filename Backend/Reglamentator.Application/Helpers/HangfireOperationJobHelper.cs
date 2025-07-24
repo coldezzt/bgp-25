@@ -7,12 +7,24 @@ using Reglamentator.Domain.Interfaces;
 
 namespace Reglamentator.Application.Helpers;
 
+/// <summary>
+/// Реализация <see cref="IHangfireOperationJobHelper"/> для управления задачами операций в Hangfire.
+/// </summary>
+/// <remarks>
+/// Использует:
+/// <list type="bullet">
+///   <item><see cref="IHangfireReminderJobHelper"/> для управления задачами напоминаний.</item>
+///   <item><see cref="IRecurringJobManager"/> для работы с Hangfire.</item>
+///   <item><see cref="IServiceProvider"/> для доступа к репозиториям.</item>
+/// </list>
+/// </remarks>
 public class HangfireOperationJobHelper(
     IHangfireReminderJobHelper hangfireReminderJobHelper,
     IRecurringJobManager recurringJobManager,
     IServiceProvider serviceProvider
     ): IHangfireOperationJobHelper
 {
+    /// <inheritdoc />
     public void CreateJobsForOperation(Operation operation)
     {
         if (operation.NextOperationInstance == null) 
@@ -32,6 +44,7 @@ public class HangfireOperationJobHelper(
         }
     }
     
+    /// <inheritdoc />
     public void UpdateJobsForOperation(Operation operation)
     {
         if (operation.NextOperationInstance == null) 
@@ -51,6 +64,7 @@ public class HangfireOperationJobHelper(
         }
     }
 
+    /// <inheritdoc />
     public void DeleteJobsForOperation(Operation operation)
     {
         recurringJobManager.RemoveIfExists(GetOperationJobId(operation.Id));
@@ -64,20 +78,42 @@ public class HangfireOperationJobHelper(
         }
     }
     
+    /// <summary>
+    /// Генерирует уникальный идентификатор задачи для операции.
+    /// </summary>
+    /// <param name="operationId">Идентификатор операции.</param>
+    /// <returns>Строка в формате "operation-{operationId}."</returns>
     private string GetOperationJobId(long operationId) => $"operation-{operationId}";
     
+    /// <summary>
+    /// Формирует cron-выражение на основе даты начала операции
+    /// </summary>
+    /// <param name="operation">Операция, для которой создается расписание</param>
+    /// <returns>Cron-выражение в формате "секунды минуты часы день месяц *"</returns>
     private string GetOperationCron(Operation operation)
     {
         var startDate = operation.StartDate;
         return $"{startDate.Second} {startDate.Minute} {startDate.Hour} {startDate.Day} {startDate.Month} *";
     }
 
+    /// <summary>
+    /// Помечает экземпляр операции как выполненный в текущий момент времени.
+    /// </summary>
+    /// <param name="operationInstance">Экземпляр операции для обработки.</param>
     private void ProcessPastOperation(OperationInstance operationInstance)
     {
         operationInstance.ExecutedAt = DateTime.UtcNow;
         operationInstance.Result = "Done";
     }
     
+    /// <summary>
+    /// Создает следующий экземпляр выполнения для периодической операции.
+    /// </summary>
+    /// <param name="operation">Операция для обработки.</param>
+    /// <remarks>
+    /// Устанавливает новую дату выполнения на основе cron-выражения
+    /// и создает новый экземпляр операции в истории.
+    /// </remarks>
     private void ProcessCronOperationCreation(Operation operation)
     {
         var now = DateTime.UtcNow;
@@ -94,6 +130,11 @@ public class HangfireOperationJobHelper(
         operation.NextOperationInstance = newOperationInstance;
     }
     
+    /// <summary>
+    /// Вычисляет следующую дату выполнения для периодической операции
+    /// </summary>
+    /// <param name="operation">Операция с cron-выражением</param>
+    /// <returns>Дата следующего выполнения</returns>
     private DateTime GetNextOccurrence(Operation operation)
     {
         var cronExpression = CrontabSchedule.Parse(
@@ -104,6 +145,13 @@ public class HangfireOperationJobHelper(
         return nextOccurrence;
     }
     
+    /// <summary>
+    /// Обрабатывает задачу операции: завершает текущий экземпляр, создает следующий (для Cron) или удаляет задачу.
+    /// </summary>
+    /// <param name="operationId">Идентификатор операции.</param>
+    /// <remarks>
+    /// Используется только hangfire
+    /// </remarks>
     public async Task ProcessOperationJob(long operationId)
     {
         await using var scope = serviceProvider.CreateAsyncScope();

@@ -4,9 +4,16 @@ using Reglamentator.Domain.Interfaces;
 
 namespace Reglamentator.Data.Repositories;
 
+/// <summary>
+/// Реализация репозитория <see cref="IOperationInstanceRepository"/> для работы с экземплярами операций.
+/// </summary>
+/// <remarks>
+/// Использует <see cref="AppDbContext"/> - Контекст базы данных.
+/// </remarks>
 public class OperationInstanceRepository(
     AppDbContext appDbContext): Repository<OperationInstance>(appDbContext), IOperationInstanceRepository
 {
+    /// <inheritdoc/>
     public async Task<List<OperationInstance>> GetExecutedUserOperationsAsync(
         long telegramId, 
         CancellationToken cancellationToken = default) =>
@@ -17,6 +24,7 @@ public class OperationInstanceRepository(
             .OrderBy(opi => opi.ExecutedAt)
             .ToListAsync(cancellationToken);
 
+    /// <inheritdoc/>
     public async Task<List<OperationInstance>> GetPlanedUserOperationsAsync(
         long telegramId, 
         TimeRange range, 
