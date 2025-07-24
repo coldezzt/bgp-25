@@ -28,8 +28,8 @@ public class OperationInstanceRepository(
             TimeRange.Day => (now.Date, now.Date.AddDays(1).AddTicks(-1)),
             TimeRange.Week => (now.Date.AddDays(-(int)now.DayOfWeek),
                 now.Date.AddDays(-(int)now.DayOfWeek + 7).AddTicks(-1)),
-            TimeRange.Month => (new DateTime(now.Year, now.Month, 1),
-                new DateTime(now.Year, now.Month, 1).AddMonths(1).AddTicks(-1)),
+            TimeRange.Month => (now.Date.AddDays(-now.Day + 1),
+                now.Date.AddDays(-now.Day + 1).AddMonths(1).AddTicks(-1)),
             _ => throw new ArgumentOutOfRangeException(nameof(range), range.ToString())
         };
         
