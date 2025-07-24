@@ -76,7 +76,7 @@ jobs:
       	with:
       	  name: bot
       	  path: ./publish/bot
-    
+          
       - name: Check if bot artifact exists
         id: check
         run: echo "found=$([[ -d ./publish/bot ]] && echo true || echo false)" >> $GITHUB_OUTPUT
