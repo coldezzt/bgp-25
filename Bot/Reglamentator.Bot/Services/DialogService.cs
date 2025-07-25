@@ -2,6 +2,7 @@
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Google.Protobuf.WellKnownTypes;
+using Reglamentator.Bot.Templates;
 using Telegram.Bot.Types.ReplyMarkups;
 using Enum = System.Enum;
 
@@ -44,7 +45,7 @@ public class DialogService
             ActionType = ActionType.Create,
             DialogObject = DialogObject.Operation
         };
-        await _botClient.SendMessage(chatId, "Введите тему задачи:", cancellationToken: ct);
+        await _botClient.SendMessage(chatId, "Введите тему задачи:", replyMarkup:Keyboards.DialogKeyboard, cancellationToken: ct);
     }
     
     /// <summary>
@@ -61,7 +62,7 @@ public class DialogService
             ActionType = ActionType.Update,
             DialogObject = DialogObject.Operation
         };
-        await _botClient.SendMessage(chatId, "Введите id задачи:", cancellationToken: ct);
+        await _botClient.SendMessage(chatId, "Введите id задачи:", replyMarkup:Keyboards.DialogKeyboard, cancellationToken: ct);
     }
     
     /// <summary>
@@ -77,7 +78,7 @@ public class DialogService
             ActionType = ActionType.Create,
             DialogObject = DialogObject.Reminder
         };
-        await _botClient.SendMessage(chatId, "Введите id операции", cancellationToken: ct);
+        await _botClient.SendMessage(chatId, "Введите id операции", replyMarkup:Keyboards.DialogKeyboard, cancellationToken: ct);
     }
     /// <summary>
     /// Запускает диалог обновления напоминания
@@ -92,7 +93,7 @@ public class DialogService
             ActionType = ActionType.Update,
             DialogObject = DialogObject.Reminder
         };
-        await _botClient.SendMessage(chatId, "Введите id операции", cancellationToken: ct);
+        await _botClient.SendMessage(chatId, "Введите id операции", replyMarkup:Keyboards.DialogKeyboard,cancellationToken: ct);
     }
     
     /// <summary>
@@ -108,7 +109,7 @@ public class DialogService
             ActionType = ActionType.Delete,
             DialogObject = DialogObject.Reminder
         };
-        await _botClient.SendMessage(chatId, "Введите id операции", cancellationToken: ct);
+        await _botClient.SendMessage(chatId, "Введите id операции", replyMarkup:Keyboards.DialogKeyboard, cancellationToken: ct);
     }
     /// <summary>
     /// Обрабатывает шаг диалога.
@@ -175,7 +176,7 @@ public class DialogService
     {
         if ( !long.TryParse(message.Text, out long reminderId))
         {
-            await _botClient.SendMessage(chatId, "Используйте правильный формат id", cancellationToken: ct);
+            await _botClient.SendMessage(chatId, "Используйте правильный формат id", replyMarkup:Keyboards.DialogKeyboard, cancellationToken: ct);
             return;
         }
 
@@ -194,6 +195,7 @@ public class DialogService
             }
 
             await CompleteDialog(chatId, "Напоминание удалено", ct);
+            return;
         }
         var reminder = state.Reminders.FirstOrDefault(x => x.Id == reminderId);
         if (reminder == null)
@@ -206,7 +208,7 @@ public class DialogService
         state.ReminderMessage = reminder.MessageTemplate;
         state.Step = DialogStep.AskReminderMessage;
         await SendCurrentReminderState(chatId, ct);
-        await _botClient.SendMessage(chatId, "Введите сообщение нового напоминания", cancellationToken: ct);
+        await _botClient.SendMessage(chatId, "Введите сообщение нового напоминания", replyMarkup:Keyboards.EditDialogKeyboard, cancellationToken: ct);
     }
     private async Task SendCurrentOperationState(long chatId, CancellationToken ct)
     {
@@ -216,8 +218,8 @@ public class DialogService
         var message = $"Текущие значения операции:\n\n" +
                       $"Тема: {state.Theme}\n" +
                       $"Описание: {state.Description}\n" +
-                      $"Дата: {state.Date:yyyy-MM-dd}\n" +
-                      $"Периодичность: {state.OperationCron}"+
+                      $"Дата: {state.Date:yyyy-MM-dd hh:mm}\n" +
+                      $"Периодичность: {state.OperationCron}\n"+
                       $"Напоминания:\n{remindersInfo}";;
         
         await _botClient.SendMessage(chatId, message, cancellationToken: ct);
@@ -236,13 +238,13 @@ public class DialogService
     {
         if ( !long.TryParse(message.Text, out long operationId))
         {
-            await _botClient.SendMessage(chatId, "Используйте правильный формат id", cancellationToken: ct);
+            await _botClient.SendMessage(chatId, "Используйте правильный формат id", replyMarkup:Keyboards.DialogKeyboard,cancellationToken: ct);
             return;
         }
         var operation = await _operationClient.GetOperationAsync(new GetOperationRequest {OperationId = operationId, TelegramId = chatId});
         if (!operation.Status.IsSuccess)
         {
-            await _botClient.SendMessage(chatId, "Не удалось получить операцию, возможно она не существует", cancellationToken: ct);
+            await _botClient.SendMessage(chatId, "Не удалось получить операцию, возможно она не существует", replyMarkup:Keyboards.DialogKeyboard,cancellationToken: ct);
             return;
         }
         state.OperationId = operationId;
@@ -255,7 +257,7 @@ public class DialogService
         if (state.DialogObject == DialogObject.Operation)
         {
             state.Step = DialogStep.AskTheme;
-            await _botClient.SendMessage(chatId, "Введите новую тему задачи (или оставьте текущую):", cancellationToken: ct);
+            await _botClient.SendMessage(chatId, "Введите новую тему задачи (или оставьте текущую):", replyMarkup:Keyboards.EditDialogKeyboard, cancellationToken: ct);
         }
         else if (state is { DialogObject: DialogObject.Reminder, ActionType: ActionType.Create })
         {
@@ -265,7 +267,7 @@ public class DialogService
         else if (state is {DialogObject: DialogObject.Reminder, ActionType:ActionType.Update})
         {
             state.Step = DialogStep.AskReminderId;
-            await _botClient.SendMessage(chatId, "Введите id напоминания, которое хотите изменить", cancellationToken: ct);
+            await _botClient.SendMessage(chatId, "Введите id напоминания, которое хотите изменить", replyMarkup:Keyboards.EditDialogKeyboard,cancellationToken: ct);
         }
         else
         {
@@ -276,52 +278,73 @@ public class DialogService
     }
     private async Task HandleDescriptionStep(Message message, DialogState state, long chatId, CancellationToken ct)
     {
-        state.Description = message.Text ?? "";
         state.Step = DialogStep.AskDate;
         if (state.ActionType == ActionType.Create)
         {
-            await _botClient.SendMessage(chatId, "Введите дату (гггг-мм-дд-чч-мм):", cancellationToken: ct);
+            state.Description = message.Text ?? "";
+            await _botClient.SendMessage(chatId, "Введите дату (yyyy-MM-dd hh:mm):", replyMarkup:Keyboards.DialogKeyboard, cancellationToken: ct);
         }
         else if (state.ActionType == ActionType.Update)
         {
+            if (message.Text != "🚫 Не изменять")
+            {
+                state.Description = message.Text ?? "";
+            }
             await SendCurrentOperationState(chatId, ct);
-            await _botClient.SendMessage(chatId, "Введите новую дату (гггг-мм-дд-чч-мм) (или оставьте текущую):", cancellationToken: ct);
+            await _botClient.SendMessage(chatId, "Введите новую дату (yyyy-MM-dd hh:mm) (или оставьте текущую):", replyMarkup:Keyboards.EditDialogKeyboard,cancellationToken: ct);
         }
     }
     private async Task HandleThemeStep(Message message, DialogState state, long chatId, CancellationToken ct)
     {
-        state.Theme = message.Text ?? "";
         state.Step = DialogStep.AskDescription;
         if (state.ActionType == ActionType.Create)
         {
-            await _botClient.SendMessage(chatId, "Введите описание задачи:", cancellationToken: ct);
+            state.Theme = message.Text ?? "";
+            await _botClient.SendMessage(chatId, "Введите описание задачи:", replyMarkup:Keyboards.DialogKeyboard,cancellationToken: ct);
         }
         else if (state.ActionType == ActionType.Update)
         {
+            if (message.Text != "🚫 Не изменять")
+            {
+                state.Theme = message.Text ?? "";
+            }
             await SendCurrentOperationState(chatId, ct);
-            await _botClient.SendMessage(chatId, "Введите новое описание задачи (или оставьте текущее):", cancellationToken: ct);
+            await _botClient.SendMessage(chatId, "Введите новое описание задачи (или оставьте текущее):", replyMarkup:Keyboards.EditDialogKeyboard,cancellationToken: ct);
         }
     }
     
     private async Task HandleDateStep(Message message, DialogState state, long chatId, CancellationToken ct)
     {
-        if (DateTime.TryParse(message.Text, out var date))
+        if (DateTime.TryParse(message.Text,out var date))
         {
-            state.Date = date;
             state.Step = DialogStep.AskTimeRange;
             if (state.ActionType == ActionType.Create)
             {
+                state.Date = date.AddHours(-3);
                 await AskTimeRangeSelection(chatId, ct);
             }
             else if (state.ActionType == ActionType.Update)
             {
+                if (message.Text != "🚫 Не изменять")
+                {
+                    state.Date = date.AddHours(-3);
+                }
                 await SendCurrentOperationState(chatId, ct);
                 await AskTimeRangeSelection(chatId, ct, "Выберите новую периодичность (или оставьте текущую):");
             }
         }
         else
         {
-            await _botClient.SendMessage(chatId, "Некорректная дата. Введите в формате гггг-мм-дд-чч-мм:", cancellationToken: ct);
+            if (state.ActionType == ActionType.Update || message.Text == "🚫 Не изменять")
+            {
+                state.Step = DialogStep.AskTimeRange;
+                await SendCurrentOperationState(chatId, ct);
+                await AskTimeRangeSelection(chatId, ct, "Выберите новую периодичность (или оставьте текущую):");
+            }
+            else
+            {
+                await _botClient.SendMessage(chatId, "Некорректная дата. Введите в формате yyyy-MM-dd hh:mm:", replyMarkup:Keyboards.DialogKeyboard,cancellationToken: ct);
+            }
         }
     }
 
@@ -330,13 +353,17 @@ public class DialogService
         if (Enum.TryParse<TimeRange>(message.Text, out var timeRange) && 
             Enum.IsDefined(typeof(TimeRange), timeRange))
         {
-            state.OperationCron = timeRange;
             if (state.ActionType == ActionType.Create)
             {
+                state.OperationCron = timeRange;
                 await CreateOperationAndCompleteDialog(state, chatId, ct);
             }
             else
             {
+                if (message.Text != "🚫 Не изменять")
+                {
+                    state.OperationCron = timeRange;
+                }
                 await UpdateOperationAndCompleteDialog(state, chatId, ct);
             }
         }
@@ -349,24 +376,10 @@ public class DialogService
    
     private async Task AskTimeRangeSelection(long chatId, CancellationToken ct, string messageText = "Выберите периодичность задачи:")
     {
-        var keyboard = new ReplyKeyboardMarkup(new[]
-        {
-            new[] { new KeyboardButton(TimeRange.Min15.ToString()) },
-            new[] { new KeyboardButton(TimeRange.Hour.ToString()) },
-            new[] { new KeyboardButton(TimeRange.Day.ToString()) },
-            new[] { new KeyboardButton(TimeRange.Week.ToString()) },
-            new[] { new KeyboardButton(TimeRange.Month.ToString()) },
-            new[] { new KeyboardButton(TimeRange.None.ToString()) }
-        })
-        {
-            ResizeKeyboard = true,
-            OneTimeKeyboard = true
-        };
-
         await _botClient.SendMessage(
             chatId,
             messageText,
-            replyMarkup: keyboard,
+            replyMarkup: Keyboards.TimeRangeKeyboard,
             cancellationToken: ct);
     }
     
@@ -375,7 +388,7 @@ public class DialogService
         if (message.Text?.Equals("Да", StringComparison.OrdinalIgnoreCase) ?? false)
         {
             state.Step = DialogStep.AskReminderMessage;
-            await _botClient.SendMessage(chatId, "Введите текст напоминания:", cancellationToken: ct);
+            await _botClient.SendMessage(chatId, "Введите текст напоминания:", replyMarkup:Keyboards.DialogKeyboard, cancellationToken: ct);
         }
         else
         {
@@ -384,57 +397,55 @@ public class DialogService
     }
     private async Task HandleReminderMessageStep(Message message, DialogState state, long chatId, CancellationToken ct)
     {
-        state.ReminderMessage = message.Text;
+        if (state.ActionType == ActionType.Create || message.Text != "🚫 Не изменять")
+        {
+            state.ReminderMessage = message.Text;
+        }
         state.Step = DialogStep.AskReminderTime;
-        
-        var keyboard = new ReplyKeyboardMarkup(new[]
-        {
-            new[] { new KeyboardButton(TimeRange.Min15.ToString()) },
-            new[] { new KeyboardButton(TimeRange.Hour.ToString()) },
-            new[] { new KeyboardButton(TimeRange.Day.ToString()) }
-        })
-        {
-            ResizeKeyboard = true,
-            OneTimeKeyboard = true
-        };
         
         if (state.ActionType == ActionType.Update)
         {
             await SendCurrentReminderState(chatId, ct);
-                
         }
         await _botClient.SendMessage(
             chatId,
             "За сколько времени напомнить?",
-            replyMarkup: keyboard,
+            replyMarkup: Keyboards.TimeRangeReminderKeyboard,
             cancellationToken: ct);
     }
     
     private async Task HandleReminderTimeStep(Message message, DialogState state, long chatId, CancellationToken ct)
     {
-        TimeRange? timeRange = null;
-        
-        if (message.Text != "Оставить текущее" && 
-            Enum.TryParse<TimeRange>(message.Text, out var parsedTime))
-        {
-            timeRange = parsedTime;
-        }
-        else if (message.Text != "Оставить текущее")
-        {
-            await _botClient.SendMessage(
-                chatId, 
-                "Неверный выбор. Пожалуйста, выберите время из предложенных вариантов.", 
-                cancellationToken: ct);
-            return;
-        }
-
         if (state.ActionType == ActionType.Create)
         {
-            await CreateReminder(state, chatId, timeRange ?? state.ReminderCron, ct);
+            if (!Enum.TryParse<TimeRange>(message.Text, out var parsedTime))
+            {
+                await _botClient.SendMessage(
+                    chatId, 
+                    "Неверный выбор. Пожалуйста, выберите время из предложенных вариантов.", 
+                    replyMarkup:Keyboards.TimeRangeReminderKeyboard,
+                    cancellationToken: ct);
+                return;
+            }
+            await CreateReminder(state, chatId, parsedTime, ct);
         }
         else
         {
-            await UpdateReminder(state, chatId, timeRange, ct);
+            if (message.Text ==  "🚫 Не изменять")
+            {
+                await UpdateReminder(state, chatId, state.ReminderCron, ct);
+                return;
+            }
+            if (!Enum.TryParse<TimeRange>(message.Text, out var parsedTime))
+            {
+                await _botClient.SendMessage(
+                    chatId, 
+                    "Неверный выбор. Пожалуйста, выберите время из предложенных вариантов.", 
+                    replyMarkup:Keyboards.TimeRangeReminderKeyboard,
+                    cancellationToken: ct);
+                return;
+            }
+            await UpdateReminder(state, chatId, parsedTime, ct);
         }
     }
 
@@ -522,21 +533,11 @@ public class DialogService
         }
         state.OperationId = result.Operation.Id;
         state.Step = DialogStep.AskAddReminder;
-        
-        var keyboard = new ReplyKeyboardMarkup(new[]
-        {
-            new[] { new KeyboardButton("Да") },
-            new[] { new KeyboardButton("Нет") }
-        })
-        {
-            ResizeKeyboard = true,
-            OneTimeKeyboard = true
-        };
 
         await _botClient.SendMessage(
             chatId,
             "✅ Задача создана! Хотите добавить напоминание?",
-            replyMarkup: keyboard,
+            replyMarkup: Keyboards.YesNoKeyboard,
             cancellationToken: ct);
     }
     
@@ -562,21 +563,11 @@ public class DialogService
             return;
         }
         state.Step = DialogStep.AskAddReminder;
-        
-        var keyboard = new ReplyKeyboardMarkup(new[]
-        {
-            new[] { new KeyboardButton("Да") },
-            new[] { new KeyboardButton("Нет") }
-        })
-        {
-            ResizeKeyboard = true,
-            OneTimeKeyboard = true
-        };
 
         await _botClient.SendMessage(
             chatId,
             "✅ Задача обновлена! Хотите добавить напоминание?",
-            replyMarkup: keyboard,
+            replyMarkup: Keyboards.YesNoKeyboard,
             cancellationToken: ct);
     }
     private async Task CompleteDialog(long chatId, string message, CancellationToken ct)
@@ -584,7 +575,7 @@ public class DialogService
         await _botClient.SendMessage(
             chatId, 
             message,
-            replyMarkup: new ReplyKeyboardRemove(),
+            replyMarkup: Keyboards.MainKeyboard,
             cancellationToken: ct);
             
         _userDialogs.TryRemove(chatId, out _);

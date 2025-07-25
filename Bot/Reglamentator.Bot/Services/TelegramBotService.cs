@@ -1,4 +1,5 @@
 using Grpc.Net.Client.Balancer;
+using Reglamentator.Bot.Templates;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -76,11 +77,11 @@ public class TelegramBotService
     
     private async Task<bool> TryHandleCancelCommand(long chatId, string text, CancellationToken ct)
     {
-        if (!text.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
+        if (!text.Equals("/cancel", StringComparison.OrdinalIgnoreCase) && !text.Equals("❌ Отменить", StringComparison.OrdinalIgnoreCase))
             return false;
         
         _dialogService.CancelDialog(chatId);
-        await SendMessage(chatId, "Диалог отменён.", MainKeyboard, ct);
+        await SendMessage(chatId, "Диалог отменён.", Keyboards.MainKeyboard, ct);
         return true;
     }
     
@@ -197,7 +198,7 @@ public class TelegramBotService
         var result = await _userClient.CreateUserAsync(new CreateUserRequest{TelegramId = chatId});
         if (result.Status.IsSuccess)
         {
-            await SendMessage(chatId, "Добро пожаловать! Выберите действие:", MainKeyboard, ct);
+            await SendMessage(chatId, "Добро пожаловать! Выберите действие:", Keyboards.MainKeyboard, ct);
             return;
         }
 
@@ -209,7 +210,7 @@ public class TelegramBotService
         var result = await _operationClient.GetOperationHistoryAsync(new OperationHistoryRequest { TelegramId = chatId });
         if (!result.Status.IsSuccess)
         {
-            await SendMessage(chatId, "Не удалось получить историю операций", ct: ct);
+            await SendMessage(chatId, "Не удалось получить историю операций", Keyboards.MainKeyboard,ct);
             return;
         }
         var history = result.History;
@@ -218,21 +219,26 @@ public class TelegramBotService
             await SendMessage(chatId, "Нет задач.", null, ct);
             return;
         }
-        var operation = $"{history[0].Operation.Theme} - {history[0].Operation.StartDate} \n";
-        var list = history[0].Operation.Id + string.Join("\n",
-            history.Select(op => $"• [{op.Id}] {op.Result} : {op.ScheduledAt} - {op.ExecutedAt}"));
-        await SendMessage(chatId, "Ваща история задач", operation + list, ct);
-        
+
+        var operationInstancesByOperationId = history
+            .GroupBy(op => (op.Operation.Id, op.Operation.Theme, op.Operation.StartDate, op.Operation.Description));
+        var list = string.Join("\n\n",
+            operationInstancesByOperationId.Select(group => 
+                $"• [{group.Key.Id}] {group.Key.Theme}\n" +
+                $"Начало операции: {group.Key.StartDate}\n" +
+                $"Описание: {group.Key.Description}\n" +
+                $"{string.Join('\n', group.Select(op => $"Результат: {op.Result} - {op.ExecutedAt}"))}"));
+        await SendMessage(chatId, "Ваша история задач\n" + list, Keyboards.MainKeyboard, ct: ct);
     }
+    
     private async Task HandleDeleteCommand(long chatId, string text, CancellationToken ct)
     {
         var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length < 2 || !int.TryParse(parts[1], out int id))
         {
-            await SendMessage(chatId, "Используйте: /delete <ID>", null, ct);
+            await SendMessage(chatId, "Используйте: /operation_delete <ID>", Keyboards.MainKeyboard, ct);
             return;
         }
-
         try
         {
             var request = new DeleteOperationRequest
@@ -241,11 +247,11 @@ public class TelegramBotService
                 OperationId = id
             };
             await _operationClient.DeleteOperationAsync(request);
-            await SendMessage(chatId, $"✅ Задача {id} удалена.", null, ct);
+            await SendMessage(chatId, $"✅ Задача {id} удалена.", Keyboards.MainKeyboard, ct);
         }
         catch
         {
-            await SendMessage(chatId, $"❌ Не удалось удалить задачу {id}.", null, ct);
+            await SendMessage(chatId, $"❌ Не удалось удалить задачу {id}.", Keyboards.MainKeyboard, ct);
         }
     }   
     
@@ -256,7 +262,7 @@ public class TelegramBotService
         
         if (response.Instances.Count == 0)
         {
-            await SendMessage(chatId, "Нет задач.", null, ct);
+            await SendMessage(chatId, "Нет задач.", Keyboards.MainKeyboard, ct);
             return;
         }
 
@@ -267,7 +273,7 @@ public class TelegramBotService
             return $"• [{dto.Id}] {dto.Theme} — {dueDate}";
         }));
 
-        await SendMessage(chatId, "Ваши задачи:\n" + list, null, ct);
+        await SendMessage(chatId, "Ваши задачи:\n" + list, Keyboards.MainKeyboard, ct);
     }
 
     private async Task HandleFilteredListCommand(long chatId, string filter, CancellationToken ct)
@@ -295,7 +301,7 @@ public class TelegramBotService
                 "month" => "На месяц задач нет.",
                 _ => "Нет задач."
             };
-            await SendMessage(chatId, msg, null, ct);
+            await SendMessage(chatId, msg, Keyboards.MainKeyboard, ct);
             return;
         }
 
@@ -314,7 +320,7 @@ public class TelegramBotService
             _ => "Задачи:\n"
         };
 
-        await SendMessage(chatId, header + list, null, ct);
+        await SendMessage(chatId, header + list, Keyboards.MainKeyboard, ct);
     }
 
     private async Task SendMessage(long chatId, string text, ReplyKeyboardMarkup? markup = null, CancellationToken ct = default)
@@ -324,7 +330,7 @@ public class TelegramBotService
 
     private async Task SendInfoMessage(long chatId, CancellationToken ct)
     {
-        await SendMessage(chatId, InfoMessage, MainKeyboard, ct);
+        await SendMessage(chatId, InfoMessage, Keyboards.MainKeyboard, ct);
     }
 
     private Task HandleErrorAsync(ITelegramBotClient bot, Exception exception, HandleErrorSource source, CancellationToken ct)
@@ -332,16 +338,4 @@ public class TelegramBotService
         Console.WriteLine(exception.ToString());
         return Task.CompletedTask;
     }
-
-    private static readonly ReplyKeyboardMarkup MainKeyboard = new(new[]
-    {
-        new KeyboardButton[] { "📋 Список задач",  "⏳ История задач","ℹ️ Инструкция" },
-        new KeyboardButton[] { "📅 Сегодня", "🗓️ Неделя", "📆 Месяц" },
-        new KeyboardButton[] { "➕ Добавить задачу","✏️ Изменить задачу", "❌ Удалить задачу" },
-        new KeyboardButton[]{"⏰ Добавить напоминание", "🔄 Обновить напоминание","🗑️ Удалить напоминание" }
-    })
-    {
-        ResizeKeyboard = true,
-        OneTimeKeyboard = false
-    };
 }
